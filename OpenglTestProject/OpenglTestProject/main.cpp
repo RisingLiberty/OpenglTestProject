@@ -155,6 +155,51 @@ int SdlTest()
 
 #endif
 
+const char* vertexShaderCode =
+//from OpenGL version 3.3 shader version is equal to OpenGL version
+//The #version preprocessor directive is used to indicate that the code that follows i GLSL 1.50 code
+//using OpenGL's core profile.
+"#version 150 core\n"
+
+//Next we specify that there is only 1 attribute, the position
+"in vec2 position;\n"
+
+//Apart from regular C types, GLSL has built-in vector and matrix types
+//identified by vec* and mat* identifiers.
+//the values within these constructs is always a float.
+//The number after vec specifies the number of components(x,y,z,w) and
+//the number after mat specifies the number of rows/columns.
+//Since the position attribute consists of only an x and y coordinate, vec2 is perfect
+"void main()\n"
+"{\n"
+
+//You can be quite creative when working with vertex types.
+//In the example above a shortcuts was used to set the first two components of the vec4
+//to those of vec2. the following 2 lines are equal
+//gl_Position = vec(position, 0.0f, 1.0f);
+//gl_Position = vec(position.x, position.y, 0.0f, 1.0f);
+//When you're working with colors, you can also access the individual components with r, g, b and a
+//instead of x, y, z and w. this makes no difference and can help with clarity.
+//The final position of the vertex assigned to the special gl_Position variable,
+//because the position is needed for primitive assembly and many other built-in processes.
+//For these to function correctly, the last value w needs to have a value of 1.0f.
+//Other than that, you're free to do anything you want with the attributes.
+"gl_Position = vec4(position, 0.0f, 1.0f);\n"
+"}\n";
+
+const char* fragmentShaderCode =
+"#version 150 core\n"
+
+//You'll immediately notice that we're not using some built-in variable for outputting the color, say gl_FragColor.
+//This is because a fragment shader can in fact output multiple colors.
+//The outColor variable uses the type vec4, because each color consists of a red, green, blue and alpha component.
+//Colors in OpenGL are generally represented as floating point number between 0.0 and 1.0 instead of the common 0 and 255.
+"out vec4 outColor;\n"
+"void main()\n"
+"{\n"
+"outColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);\n"
+"}\n";
+
 int main()
 {
 	int errResult = 0;
@@ -175,61 +220,161 @@ int main()
 #else
 #pragma endregion
 
-	glfwInit();
+	sf::ContextSettings settings;
+	settings.depthBits = 24;
+	settings.stencilBits = 8;
+	settings.majorVersion = 3;
+	settings.minorVersion = 2;
 
-	//Let's create the window.
-	//before we create the actual window, we first set some options
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+	sf::Window window(sf::VideoMode(800, 600, 32), "OpenGL", sf::Style::Titlebar | sf::Style::Close, settings);
 
-	//The GLFW_OPENGL_PROFILE option specifies that we want a context that only support the new core functionality.
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+	//Initialize GLEW
+	glewExperimental = GL_TRUE;
+	glewInit();
 
-	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
-	//The first 2 parameters of glfwCreateWindow specify the width and height of the drawing surface.
-	//the third parameter specifies the window title.
-	//The fourth parameter should be set to NULL for windowed mode, and glfwGetPrimaryMonitor for fullscreen mode
-	//the last parameter allows you to specify an existing OpenGL context to share resources like textures with.
-	//The glfwWindowHint function is used to specify additional requirements for a window.
-	GLFWwindow* pWindow = glfwCreateWindow(800, 600, "OpenGL", nullptr, nullptr); //Windowed
-	//GLFWwindow* pWindow = glfwCreateWindow(800, 600, "OpenGL", glfwGetPrimaryMonitor(), nullptr); //Fullscreen
-
-	glfwMakeContextCurrent(pWindow);
-	
-	/*
-	
-	//Specify prototype of function
-	typedef void (*GENBUFFERS) (GLsizei, GLuint*)
-	
-	//Load address of function and assign it to a function pointer
-	GENBUFFERS glGenBuffers = (GENBUFFERS)wglGetProcAddress("glGenBuffers");
-
-	//or Linux:
-	GENBUFFERS glGenBuffers = (GENBUFFERS)glXGetProcAddres((const GLubyte *) "glGenBuffers");
-
-	//or OSX
-	GENBUFFERS glGenBuffers = (GENBUFFERS)NSGLGetProcAddress("glGenBuffers");
-
-	//Call function as normal
-	GLuint buffer;
-	glGenBuffers(1, &buffer);
-	
-	*/
-	
-	while (!glfwWindowShouldClose(pWindow))
+	//The array should simply be a list of all vertices with their attributes packed together.
+	//The order in which the attributes appear doesn't matter, as long as it's the same for each vertex.
+	//the order of the vertices doesn't have to be sequential(i.e. the order in which shapes are formed),
+	//but this requires us to provide extra data in the form of an element buffer.
+	float vertices[] =
 	{
-		//Swap front and back buffer
-		glfwSwapBuffers(pWindow);
-		glfwPollEvents();
+		0.0f,  0.5f, //Vertex 1(x,y)
+		0.5f, -0.5f, //Vertex 2(x,y)
+	   -0.5f, -0.5f  //Vertex 3(x,y)	
+	};
 
-		//For fullscreen:
-		if (glfwGetKey(pWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-			glfwSetWindowShouldClose(pWindow, GL_TRUE);
+	//The next step is to upload this vertex data to the graphics card. 
+	//This is important because the memory on your graphics card is much faster and
+	//you won't have to send the data again every time your scene needs to rendered.
+
+	//This is done by creating a Vertex Buffer Object
+	GLuint vbo;
+
+	//The memory is managed by OpenGL, so instead of a pointer you get a positive number as a reference to it.
+	//GLuint is simply a cross-platform substitute for unsigned int, just like GLint is one for int.
+	//You will need this number to make the VBO active and to destroy it when you're done with it.
+	glGenBuffers(1, &vbo);
+
+	//To upload the actual data to it you first have to make it the active object by calling glBindBuffer
+	//As hinted by the GL_ARRAY_BUFFER enum value, there are other types of buffers.
+	//This statement makes the VBO we just created the active array buffer. 
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+	//now that it's active we can copy the vertex data to it.
+	//Notice that this function doesn't refer to the id of our VBO,
+	//but instead to the active array buffer. The second parameter specifies the size in byes.
+	//The final parameter is very important and its value depends on the usage of the vertex data.
+	//Possible usages:
+	//GL_STATIC_DRAW: The vertex data will be uploaded once and drawn many times (eg. the world)
+	//GL_DYNAMIC_DRAW: The vertex data will be created once, changed from time to time, but drawn many times more than that.
+	//GL_STREAM_DRAW: the vertex data will be uploaded once and drawn once.
+
+	//This usage value will determine in what kind of memory the data is stored on your graphics card for the highest efficiency.
+	//For example, VBOs with GL_STREAM_DRAW as type may store their data in memory that allows faster writing in favor of slightly slower drawing.
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	//Just like vertex buffers, creating a shade itself starts with creating a shader object and loading data into it
+	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+
+	//Unlike VBOs, you can simply pass a reference to shader functions instead of making it active
+	//or anything like that. The glShaderSource function can take multiple source string in an array,
+	//but you'll usually have your source code in one char array. The last parameter can contain an array of source code string lengths.
+	//passing NULL simply makes it stop at the null terminator.
+	glShaderSource(vertexShader, 1, &vertexShaderCode, NULL);
+
+	//Compile the shadr
+	glCompileShader(vertexShader);
+
+	GLint status;
+
+	//get the compile status
+	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
+
+	//buffer for debug info
+	char buffer[512];
+
+	//get the debug info of the shader compilation
+	glGetShaderInfoLog(vertexShader, 512, NULL, buffer);
+
+	//Successful compilation?
+	if (status == GL_FALSE)
+	{
+		std::cout << "Vertex shader compile error" << std::endl;
+		std::cout << buffer << std::endl;
 	}
 
-	glfwTerminate();
+	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(fragmentShader, 1, &fragmentShaderCode, NULL);
+
+	glCompileShader(fragmentShader);
+
+	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
+	glGetShaderInfoLog(fragmentShader, 512, NULL, buffer);
+
+	if (status == GL_FALSE)
+	{
+		std::cout << "Fragment shader compile error" << std::endl;
+		std::cout << buffer << std::endl;
+	}
+
+	//Up until now the vertex and fragment shader have been 2 separate objects.
+	//While they've been programmed to work together, they aren't actually connected yet.
+	//This connection is made by creating a program out of these 2 shader.
+	GLuint shaderProgram = glCreateProgram();
+	glAttachShader(shaderProgram, vertexShader);
+	glAttachShader(shaderProgram, fragmentShader);
+
+	//Since a fragment shader is allowed to write to multiple buffers,
+	//you need to explicitly specify which output is written to which buffer.
+	//This needs to happen before linking the program. 
+	//However, since this is 0 by default and there's only one output right now
+	//the following line of code is not necessary
+	glBindFragDataLocation(shaderProgram, 0, "outColor");
+
+	//USe glDrawBuffers when rendering to multiple buffers, because only the first output will be enabled by default.
+
+	//After attaching both the fragment and vertex shaders, the connection is made by linking the program.
+	//It i s allowed to make changes to the shaders after they've been added to a program (or multiple programs),
+	//but the actual result will not change until a program has been linked again. It is also possible to attach
+	//multiple shaders for the same stage (e.g. fragment) if they're parts forming the whole shader together.
+	//A shader object can be deleted with glDeleteShader, but it will not actually be removed before it has been
+	//detached from all programs with glDetachShader.
+	glLinkProgram(shaderProgram);
+
+	//to actually start using the shaders in the program, you just have to call glUseProgram
+	glUseProgram(shaderProgram);
+
+	//Just like a vertex buffer, only one program can be active at a time.
+
+	//Although we have our vertex data and shaders now, OpenGL still doesn't know how the attributes are formatted and ordered. 
+	//You first need to retrieve a reference to the position input in the vertex shader
+	GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
+
+	//The location is a number depending on the order of the input definitions.
+	//The first and only input position in this example will always have location 0
+	//With the reference to the input, you can specify how the data for that input is retrieved from the array.
+	//The first parameter references the input.
+	//The second parameter specifies the number of values for that input, which is the same as the number of components
+	//The third parameter specifies what type the values are
+	//The fourth parameter specifies whether the input values should be normalized between -1.0 and 1.0 or
+	//0.0 and 1.0 depending on the format if they aren't floating point numbers.
+	//the last 2 parameters are arguably the most important here as they specify how the attribute is laid out in the vertex array.
+	//The first numbers specifies the stride, or how many bytes are between each position attribute in the array.
+	//The value 0 means that there is no data in between. This is currently the case as the position of each vertex
+	//is immediately followed by the position of the next vertex.
+	//the last parameter specifies the offset, or how many bytes from the start of the array the attribute occurs.
+	//Since there are no other attributes, this is 0 as well.
+
+	//It is important to know that this function will store not only the stride and the offset, but also the VBO that is currently bound to GL_ARRAY_BUFFER.
+	//that means that you don't have to explicitly bind the correct VBO when the actual drawing functions are called.
+	//This also implies that you can use a different VBO for each attribute
+	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
+	
+	//Last but not least, the vertexattribarray should be enabled.
+	glEnableVertexAttribArray(posAttrib);
+
+	std::cin.get();
 
 	return errResult;
 #endif
