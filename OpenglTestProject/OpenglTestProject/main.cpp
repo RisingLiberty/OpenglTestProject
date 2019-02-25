@@ -155,7 +155,7 @@ int SdlTest()
 
 #endif
 
-const char* vertexShaderCode =
+const char* vertexSource =
 //from OpenGL version 3.3 shader version is equal to OpenGL version
 //The #version preprocessor directive is used to indicate that the code that follows i GLSL 1.50 code
 //using OpenGL's core profile.
@@ -163,6 +163,10 @@ const char* vertexShaderCode =
 
 //Next we specify that there is only 1 attribute, the position
 "in vec2 position;\n"
+"in vec3 color;\n"
+
+//The color to output to the fragment shader
+"out vec3 Color;\n"
 
 //Apart from regular C types, GLSL has built-in vector and matrix types
 //identified by vec* and mat* identifiers.
@@ -185,19 +189,26 @@ const char* vertexShaderCode =
 //For these to function correctly, the last value w needs to have a value of 1.0f.
 //Other than that, you're free to do anything you want with the attributes.
 "gl_Position = vec4(position, 0.0f, 1.0f);\n"
+"Color = color;"
 "}\n";
 
-const char* fragmentShaderCode =
+const char* fragmentSource =
 "#version 150 core\n"
 
 //You'll immediately notice that we're not using some built-in variable for outputting the color, say gl_FragColor.
 //This is because a fragment shader can in fact output multiple colors.
 //The outColor variable uses the type vec4, because each color consists of a red, green, blue and alpha component.
 //Colors in OpenGL are generally represented as floating point number between 0.0 and 1.0 instead of the common 0 and 255.
+
+//Vertex attributes are not the only way to pass data to shader programs. There is another way to pass data to shaders called uniforms.
+//These are essentially global variables, having the same value for all vertices and/or fragments.
+"in vec3 Color;\n"
+
 "out vec4 outColor;\n"
+
 "void main()\n"
 "{\n"
-"outColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);\n"
+"outColor = vec4(Color, 1.0f);\n"
 "}\n";
 
 int main()
@@ -239,10 +250,21 @@ int main()
 	//but this requires us to provide extra data in the form of an element buffer.
 	float vertices[] =
 	{
-		0.0f,  0.5f, //Vertex 1(x,y)
-		0.5f, -0.5f, //Vertex 2(x,y)
-	   -0.5f, -0.5f  //Vertex 3(x,y)	
+		0.0f,  0.5f,  1.0f, 0.0f, 0.0f, //Vertex 1(x,y,r,g,b)
+		0.5f, -0.5f,  0.0f, 1.0f, 0.0f, //Vertex 2(x,y,r,g,b)
+	   -0.5f, -0.5f,  0.0f, 0.0f, 1.0f //Vertex 3(x,y,r,g,b)	
 	};
+
+	//You can imagine that real graphics programs use many different shaders and vertex layouts to take care of a wide variety of needs and special effects.
+	//Changing the active shader program is easy enough with a call to glUseProgram, but it would be quite inconvenient if you had to set up all of the attributes again every time.
+
+	//Luckily, OpenGL solves that problem with Vertex Array Objects (VAO). VAOs store all of the links between the attributes and your VBOs with raw vertex data
+	//A VAO is created in the same way as a VBO.
+	GLuint vao;
+	glGenVertexArrays(1, &vao);
+
+	//To start using is, simply bind it
+	glBindVertexArray(vao);
 
 	//The next step is to upload this vertex data to the graphics card. 
 	//This is important because the memory on your graphics card is much faster and
@@ -281,9 +303,9 @@ int main()
 	//or anything like that. The glShaderSource function can take multiple source string in an array,
 	//but you'll usually have your source code in one char array. The last parameter can contain an array of source code string lengths.
 	//passing NULL simply makes it stop at the null terminator.
-	glShaderSource(vertexShader, 1, &vertexShaderCode, NULL);
+	glShaderSource(vertexShader, 1, &vertexSource, NULL);
 
-	//Compile the shadr
+	//Compile the shader
 	glCompileShader(vertexShader);
 
 	GLint status;
@@ -305,11 +327,11 @@ int main()
 	}
 
 	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(fragmentShader, 1, &fragmentShaderCode, NULL);
+	glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
 
 	glCompileShader(fragmentShader);
 
-	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
+	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &status);
 	glGetShaderInfoLog(fragmentShader, 512, NULL, buffer);
 
 	if (status == GL_FALSE)
@@ -369,12 +391,91 @@ int main()
 	//It is important to know that this function will store not only the stride and the offset, but also the VBO that is currently bound to GL_ARRAY_BUFFER.
 	//that means that you don't have to explicitly bind the correct VBO when the actual drawing functions are called.
 	//This also implies that you can use a different VBO for each attribute
-	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
+	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0);
 	
 	//Last but not least, the vertexattribarray should be enabled.
 	glEnableVertexAttribArray(posAttrib);
 
-	std::cin.get();
+	//The same for colorAttrib
+	GLint colAttrib = glGetAttribLocation(shaderProgram, "color");
+
+	//The fifth paramter is set to 5*sizeof(float) now, because each vertex consists of 5 floating point atttribute values.
+	//The offset of 2*sizeof(float) for the color attribute is there because each vertex starts with 2 floating point
+	//values for the position that it has to skip over.
+	glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(2 * sizeof(float)));
+	glEnableVertexAttribArray(colAttrib);
+
+	//As soon as you've bound a certain VAO, every time you call glVertexAttribPointer,
+	//that information will be stored in that VAO. This makes switching between different
+	//vertex data and vertex formats as easy as binding a different VAO!
+	//Just remember that a VAO doesn't store any vertex data by itself, it just references the VBOs
+	//you've created and how to retrieve the attribute values from them.
+
+	//Since only call after binding a VAO stick to it, make sure that you've created and bound the VAO at the start
+	//of your program. Any vertex buffers and element buffers bound before it will be ignored.
+
+	//Now it's time to draw a triangle!
+	//the VAO that was used to store the attribute information is already bound, so you don't have to
+	//worry about that. All that's left is to simply call glDrawArrays in your main loop
+
+	//The first parameter specifies the kind of primitive(commonly point, line or triangle),
+	//the second parameter specifies how many vertices to skip at the beginning
+	//the last parameter specifies the number of vertices to process.
+	bool running = true;
+	
+	auto t_start = std::chrono::high_resolution_clock::now();
+
+	while (running)
+	{
+		sf::Event windowEvent;
+		while (window.pollEvent(windowEvent))
+		{
+			switch (windowEvent.type)
+			{
+			case sf::Event::Closed:
+				running = false;
+				break;
+			case sf::Event::KeyPressed:
+				if (windowEvent.key.code == sf::Keyboard::Escape)
+					running = false;
+				break;
+			}
+
+			//Changing the value of a uniform is just like setting vertex attributes, you first have to grab the location.
+			GLint uniColor = glGetUniformLocation(shaderProgram, "triangleColor");
+
+			//The values of uniforms are changed with any of the glUnifromXY functions, where X is the number of
+			//components and Y is the type. Common types are f(float), d(double) and i(integer)
+			auto t_now = std::chrono::high_resolution_clock::now();
+			float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_now - t_start).count();
+
+			float redValue = (sin(time) + 1.0f) * 0.5f;
+			
+			std::cout << redValue << std::endl;
+
+			glUniform3f(uniColor, redValue, 0.0f, 0.0f);
+
+			//Clear the screen to black
+			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+			glClear(GL_COLOR_BUFFER_BIT);
+			
+			glDrawArrays(GL_TRIANGLES, 0, 3);
+		
+			//Swap buffers
+			window.display();
+
+		}
+	}
+
+	glDeleteProgram(shaderProgram);
+	glDeleteShader(fragmentShader);
+	glDeleteShader(vertexShader);
+
+	glDeleteBuffers(1, &vbo);
+
+	glDeleteVertexArrays(1, &vao);
+
+	window.close();
 
 	return errResult;
 #endif
