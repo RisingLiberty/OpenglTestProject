@@ -21,6 +21,8 @@
 #include <SDL/SDL_opengl.h>
 #endif
 
+#include <Stb/stb_image.h>
+
 #undef main
 
 #if defined GL_TEST
@@ -250,9 +252,16 @@ int main()
 	//but this requires us to provide extra data in the form of an element buffer.
 	float vertices[] =
 	{
-		0.0f,  0.5f,  1.0f, 0.0f, 0.0f, //Vertex 1(x,y,r,g,b)
-		0.5f, -0.5f,  0.0f, 1.0f, 0.0f, //Vertex 2(x,y,r,g,b)
-	   -0.5f, -0.5f,  0.0f, 0.0f, 1.0f //Vertex 3(x,y,r,g,b)	
+	   -0.5f,  0.5f,  1.0f, 0.0f, 0.0f, //Vertex 1(x,y,r,g,b)
+		0.5f,  0.5f,  0.0f, 1.0f, 0.0f, //Vertex 2(x,y,r,g,b)
+	    0.5f, -0.5f,  0.0f, 0.0f, 1.0f, //Vertex 3(x,y,r,g,b)
+	   -0.5f, -0.5f,  1.0f, 1.0f, 1.0f, //Vertex 4(x,y,r,g,b)
+	};
+
+	GLuint indices[]
+	{
+		0,1,2,
+		2,3,0
 	};
 
 	//You can imagine that real graphics programs use many different shaders and vertex layouts to take care of a wide variety of needs and special effects.
@@ -295,6 +304,16 @@ int main()
 	//This usage value will determine in what kind of memory the data is stored on your graphics card for the highest efficiency.
 	//For example, VBOs with GL_STREAM_DRAW as type may store their data in memory that allows faster writing in favor of slightly slower drawing.
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	//An element array is filled with unsigned integers referring to vertices bound to GL_ARRAY_BUFFER.
+	//They are loaded into video memory through a VBO just like the vertex data.
+	GLuint ebo;
+	glGenBuffers(1, &ebo);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+
+	//The only thing that differs is the GL_ELEMENT_ARRAY_BUFFER.
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
 	//Just like vertex buffers, creating a shade itself starts with creating a shader object and loading data into it
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
@@ -425,6 +444,90 @@ int main()
 	
 	auto t_start = std::chrono::high_resolution_clock::now();
 
+	//Textures are typically used for images to decorate 3D models, but in reality
+	//they can be used to store many different kinds of data. It's possible to have 1D, 2D and even 3D textures, 
+	//which can be used to store bulk data on the GPU. an example of another use for textures is storing certain
+	//terrain information.
+	GLuint tex;
+	glGenTextures(1, &tex);
+
+	//Just like other objects, textures have to be bound to apply operations on them.
+	//Since images are 2D arrays of pixels, it will be bound to the GL_TEXTURE_2D target.
+
+	//The pixels in the texture will be addressed using texture coordinates during drawing operations.
+	//These coordinates range from 0.0 to 1.0 where (0,0) is conventionally the bottom-left corner and (1,1) is the top right corner of the texture image.
+	//The operation that uses these texture coordinates to retrieve color information from the pixels is called sampling.
+	//There are different ways to approach this problem, each being appropriate for different scenarios.
+	//OpenGL offers you many options to control how this sampling is done.
+
+	//The first thing you'll have to consider is how the texture should be sampled when a coordinate outside the range of 0 to1 is given. 
+	//OpenGL offers 4 ways of handling this.
+	//GL_REPEAT: The integer part of the coordinate will be ignored and a repeating pattern is formed.
+	//GL_MIRROERED_REPEAT: The texture will also be repeated, but it will be mirrored when the integer part of the coordinate is odd.
+	//GL_CLAMP_TO_EDGE: the coordinate will simply be clamped between 0 and 1.
+	//GL_CLAMP_TO_BORDER: the coordinates that fall outside the range will be given a specified border color.
+
+	glBindTexture(GL_TEXTURE_2D, tex);
+
+	//As before, the i here indicates the type of value you want to specify. If you use GL_CLAMP_TO_BORDER 
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	//and you want to change the border color, you need to change the value of GL_TEXTURE_BORDER_COLOR bypassing an RGBA float array
+	float color[] = { 1.0f, 0.0f, 0.0f, 1.0f };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, color);
+
+	//Since texture coordinates are resolution independent, they won't always match a pixel exactly.
+	//this happens when a texture image is stretched beyond its original size or when it's sized down. OpenGL offers various methods to decide
+	//on the sampled color when this happens. This process is called filtering and the following methods are available.
+
+	//GL_NEAREST: returns the pixel is closest to the coordinates.
+	//GL_LINEAR: returns the weighted average of the 4 pixels surrounding the given coordinates.
+	//GL_NEAREST_MIPMAP, GL_LINEAR_MIP_MAP_NEAREST,
+	//GL_NEAREST_MIPMAP_LINEAR, GL_LINEAR_MIPMAP_LINEAR: Sample from mipmaps instead.
+
+	//There is another way to filter textures: mipmaps
+	//Mipmaps are smaller copies of your textures that have been sized down and filtered in advance.
+	//It is recommended that you use them because they result in both a higher quality and higher performance.
+
+	//To use mipmaps, select one of the four mipmap filtering methods.
+	//GL_NEAREST_MIPMAP_NEAREST: Uses the mipmap that most  closely matches the size of the pixel being textured
+	//and samples with nearest neighbor interpolation
+	//GL_LINEAR_MIPMAP_NEAREST: Samples the closest mipmap with linear interpolation
+	//GL_NEAREST_MIPMAP_LINEAR: Uses the 2 mipmaps that most closely match the size of the pixel being textures
+	//and samples with nearest neighbor interpolation.
+	//GL_LINEAR_MIPMAP_LINEAR: Samples closet two mipmaps with linear 
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glGenerateMipmap(GL_TEXTURE_2D);
+
+	//Black/White checkerboard
+	float pixels [] = 
+	{
+		0.0f, 0.0f, 0.0f,	1.0f, 1.0f, 1.0f,
+		1.0f, 1.0f, 1.0f,	0.0f, 0.0f, 0.0f
+	};
+
+	int width, height;
+	unsigned char* image = SOIL_load_image("img.png", &width, &height, 0, SOIL_LOAD_RGB);
+
+	//The first parameter after the texture target is the level of detail, where 0 is the base image.
+	//This parameter can be used to load your own mipmap images.
+	//The second parameter specifies the internal pixel format, the format in which pixels should be stored on the gpu.
+	//many different formats are available, including compressed formats, so it's certainly worth taking a look at all of the options.
+	//The third and fourth parameters specify the width and height of the image.
+	//the fifth parameter should always have a value of 0 per specification.
+	//The next 2 parameters describe the format of the pixels in the array that will be loaded.
+	//The final parameters specifies the array itself.
+	//the functions begins loading the image at coordinate (0,0) so pay attention to this.
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_RGB, GL_FLOAT, pixels);
+
+	//But how is the pixel array itself established? Textures in graphics applications will usually be a lot more sophisticated than simple patterns and
+	//will be loaded from files. Best practice is to ave your files in a format that is natively supported by the hardware, but it may sometimes be more convenient to load
+	//textures from common image formats like JPG and PNG. Unfortunately OpenGL doesn't offer any helper functions to load pixels from these image files, 
+	//but that's where third-party libraries come in handy again!
+
 	while (running)
 	{
 		sf::Event windowEvent;
@@ -459,7 +562,12 @@ int main()
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 			glClear(GL_COLOR_BUFFER_BIT);
 			
-			glDrawArrays(GL_TRIANGLES, 0, 3);
+			//The first parameter is the same as with glDrawArray, but the other ones all refer to the element buffer.
+			//The second parameter specifies the number of indices to draw
+			//the third parameter specifies the type of the element data
+			//The last parameter specifies the offset.
+			//The only real difference is that you're talking about indices instead of vertices now.
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 		
 			//Swap buffers
 			window.display();
