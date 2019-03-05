@@ -212,11 +212,18 @@ const char* fragmentSource =
 "in vec2 Texcoord;\n"
 "out vec4 outColor;\n"
 
-"uniform sampler2D tex;\n"
+"uniform sampler2D texHalo;\n"
+"uniform sampler2D texGoogle;\n"
 
 "void main()\n"
 "{\n"
-"outColor = texture(tex, Texcoord);// * vec4(Color, 1.0f);\n"
+"vec4 colHalo = texture(texHalo, Texcoord);// * vec4(Color, 1.0f);\n"
+"vec4 colGoogle = texture(texGoogle, Texcoord);// * vec4(Color, 1.0f);\n"
+
+//the mix function is a special GLSL function that linearly interpolates between 2 variables based on the third parameter.
+//A value of 0.0 will result in the first value, a value of 1.0 will result in the second value and a value in between will
+//result in a mixture of both.
+"outColor = mix(colHalo, colGoogle, 0.5f);"
 "}\n";
 
 #include <stdio.h>
@@ -462,8 +469,8 @@ int main()
 	//they can be used to store many different kinds of data. It's possible to have 1D, 2D and even 3D textures, 
 	//which can be used to store bulk data on the GPU. an example of another use for textures is storing certain
 	//terrain information.
-	GLuint tex;
-	glGenTextures(1, &tex);
+	GLuint textures[2];
+	glGenTextures(2, textures);
 
 	//Just like other objects, textures have to be bound to apply operations on them.
 	//Since images are 2D arrays of pixels, it will be bound to the GL_TEXTURE_2D target.
@@ -474,14 +481,46 @@ int main()
 	//There are different ways to approach this problem, each being appropriate for different scenarios.
 	//OpenGL offers you many options to control how this sampling is done.
 
-	//The first thing you'll have to consider is how the texture should be sampled when a coordinate outside the range of 0 to1 is given. 
-	//OpenGL offers 4 ways of handling this.
-	//GL_REPEAT: The integer part of the coordinate will be ignored and a repeating pattern is formed.
-	//GL_MIRROERED_REPEAT: The texture will also be repeated, but it will be mirrored when the integer part of the coordinate is odd.
-	//GL_CLAMP_TO_EDGE: the coordinate will simply be clamped between 0 and 1.
-	//GL_CLAMP_TO_BORDER: the coordinates that fall outside the range will be given a specified border color.
+	//Black/White checkerboard
+	float pixels [] = 
+	{
+		0.0f, 0.0f, 0.0f,	1.0f, 1.0f, 1.0f,
+		1.0f, 1.0f, 1.0f,	0.0f, 0.0f, 0.0f
+	};
 
-	glBindTexture(GL_TEXTURE_2D, tex);
+
+	//Without using the method glActiveTexture, the texture is automatically bound to GL_TEXTURE0
+	//That's why the default value of 0 for the sampler in the shader works just fine.
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, textures[0]);
+
+	//The amount of texture units supported differs per graphics card, but it will be at least 48.
+	//It is safe to say that you will never hit this limit in even the most extreme graphics applications
+
+	int width, height, texChannels;
+	unsigned char* image = stbi_load("../../Data/HaloInfinite.png", &width, &height, nullptr, STBI_rgb);
+
+	//The first parameter after the texture target is the level of detail, where 0 is the base image.
+	//This parameter can be used to load your own mipmap images.
+	//The second parameter specifies the internal pixel format, the format in which pixels should be stored on the gpu.
+	//many different formats are available, including compressed formats, so it's certainly worth taking a look at all of the options.
+	//The third and fourth parameters specify the width and height of the image.
+	//the fifth parameter should always have a value of 0 per specification.
+	//The next 2 parameters describe the format of the pixels in the array that will be loaded.
+	//The final parameters specifies the array itself.
+	//the functions begins loading the image at coordinate (0,0) so pay attention to this.
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+
+	//You can clean up the image data right after you've loaded into the texture.
+	stbi_image_free(image);
+	glUniform1i(glGetUniformLocation(shaderProgram, "texHalo"), 0);
+
+	//The first thing you'll have to consider is how the texture should be sampled when a coordinate outside the range of 0 to1 is given. 
+//OpenGL offers 4 ways of handling this.
+//GL_REPEAT: The integer part of the coordinate will be ignored and a repeating pattern is formed.
+//GL_MIRROERED_REPEAT: The texture will also be repeated, but it will be mirrored when the integer part of the coordinate is odd.
+//GL_CLAMP_TO_EDGE: the coordinate will simply be clamped between 0 and 1.
+//GL_CLAMP_TO_BORDER: the coordinates that fall outside the range will be given a specified border color.
 
 	//As before, the i here indicates the type of value you want to specify. If you use GL_CLAMP_TO_BORDER 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -516,31 +555,18 @@ int main()
 
 	glGenerateMipmap(GL_TEXTURE_2D);
 
-	//glEnable(GL_BLEND);
-
-	//Black/White checkerboard
-	float pixels [] = 
-	{
-		0.0f, 0.0f, 0.0f,	1.0f, 1.0f, 1.0f,
-		1.0f, 1.0f, 1.0f,	0.0f, 0.0f, 0.0f
-	};
-
-	int width, height, texChannels;
-	unsigned char* image = stbi_load("../../Data/HaloInfinite.png", &width, &height, nullptr, STBI_rgb);
-
-	//The first parameter after the texture target is the level of detail, where 0 is the base image.
-	//This parameter can be used to load your own mipmap images.
-	//The second parameter specifies the internal pixel format, the format in which pixels should be stored on the gpu.
-	//many different formats are available, including compressed formats, so it's certainly worth taking a look at all of the options.
-	//The third and fourth parameters specify the width and height of the image.
-	//the fifth parameter should always have a value of 0 per specification.
-	//The next 2 parameters describe the format of the pixels in the array that will be loaded.
-	//The final parameters specifies the array itself.
-	//the functions begins loading the image at coordinate (0,0) so pay attention to this.
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, textures[1]);
+	image = stbi_load("../../Data/img.png", &width, &height, nullptr, STBI_rgb);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
-
-	//You can clean up the image data right after you've loaded into the texture.
 	stbi_image_free(image);
+	glUniform1i(glGetUniformLocation(shaderProgram, "texGoogle"), 1);
+
+	//As before, the i here indicates the type of value you want to specify. If you use GL_CLAMP_TO_BORDER 
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	//As mentioned before, OpenGL expects the first pixel to be located in the bottom-left corner, 
 	//which means that textures will be flipped when loaded with STB directly. To counteract that, the code 
