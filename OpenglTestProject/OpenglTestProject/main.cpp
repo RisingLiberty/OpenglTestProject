@@ -21,7 +21,8 @@
 #include <SDL/SDL_opengl.h>
 #endif
 
-#include <Stb/stb_image.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb/stb_image.h>
 
 #undef main
 
@@ -166,9 +167,11 @@ const char* vertexSource =
 //Next we specify that there is only 1 attribute, the position
 "in vec2 position;\n"
 "in vec3 color;\n"
+"in vec2 texcoord;\n"
 
 //The color to output to the fragment shader
 "out vec3 Color;\n"
+"out vec2 Texcoord;"
 
 //Apart from regular C types, GLSL has built-in vector and matrix types
 //identified by vec* and mat* identifiers.
@@ -191,7 +194,8 @@ const char* vertexSource =
 //For these to function correctly, the last value w needs to have a value of 1.0f.
 //Other than that, you're free to do anything you want with the attributes.
 "gl_Position = vec4(position, 0.0f, 1.0f);\n"
-"Color = color;"
+"Color = color;\n"
+"Texcoord = texcoord;\n"
 "}\n";
 
 const char* fragmentSource =
@@ -205,17 +209,22 @@ const char* fragmentSource =
 //Vertex attributes are not the only way to pass data to shader programs. There is another way to pass data to shaders called uniforms.
 //These are essentially global variables, having the same value for all vertices and/or fragments.
 "in vec3 Color;\n"
-
+"in vec2 Texcoord;\n"
 "out vec4 outColor;\n"
+
+"uniform sampler2D tex;\n"
 
 "void main()\n"
 "{\n"
-"outColor = vec4(Color, 1.0f);\n"
+"outColor = texture(tex, Texcoord);// * vec4(Color, 1.0f);\n"
 "}\n";
+
+#include <stdio.h>
 
 int main()
 {
 	int errResult = 0;
+	
 #pragma region Test
 #ifdef SFML_TEST
 	errResult = SFMLTest();
@@ -252,10 +261,11 @@ int main()
 	//but this requires us to provide extra data in the form of an element buffer.
 	float vertices[] =
 	{
-	   -0.5f,  0.5f,  1.0f, 0.0f, 0.0f, //Vertex 1(x,y,r,g,b)
-		0.5f,  0.5f,  0.0f, 1.0f, 0.0f, //Vertex 2(x,y,r,g,b)
-	    0.5f, -0.5f,  0.0f, 0.0f, 1.0f, //Vertex 3(x,y,r,g,b)
-	   -0.5f, -0.5f,  1.0f, 1.0f, 1.0f, //Vertex 4(x,y,r,g,b)
+	//	Position	    	   Color			  UV
+	   -0.5f,  0.5f,     1.0f, 0.0f, 0.0f,    0.0f, 0.0f, //Vertex 1(x,y,r,g,b)
+		0.5f,  0.5f,     0.0f, 1.0f, 0.0f,    1.0f, 0.0f, //Vertex 2(x,y,r,g,b)
+	    0.5f, -0.5f,     0.0f, 0.0f, 1.0f,	  1.0f, 1.0f, //Vertex 3(x,y,r,g,b)
+	   -0.5f, -0.5f,     1.0f, 1.0f, 1.0f,    0.0f, 1.0f  //Vertex 4(x,y,r,g,b)
 	};
 
 	GLuint indices[]
@@ -410,7 +420,7 @@ int main()
 	//It is important to know that this function will store not only the stride and the offset, but also the VBO that is currently bound to GL_ARRAY_BUFFER.
 	//that means that you don't have to explicitly bind the correct VBO when the actual drawing functions are called.
 	//This also implies that you can use a different VBO for each attribute
-	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0);
+	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 7 * sizeof(float), 0);
 	
 	//Last but not least, the vertexattribarray should be enabled.
 	glEnableVertexAttribArray(posAttrib);
@@ -421,8 +431,12 @@ int main()
 	//The fifth paramter is set to 5*sizeof(float) now, because each vertex consists of 5 floating point atttribute values.
 	//The offset of 2*sizeof(float) for the color attribute is there because each vertex starts with 2 floating point
 	//values for the position that it has to skip over.
-	glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(2 * sizeof(float)));
+	glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void*)(2 * sizeof(float)));
 	glEnableVertexAttribArray(colAttrib);
+
+	GLint texAttrib = (glGetAttribLocation(shaderProgram, "texcoord"));
+	glEnableVertexAttribArray(texAttrib);
+	glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void*)(5 * sizeof(float)));
 
 	//As soon as you've bound a certain VAO, every time you call glVertexAttribPointer,
 	//that information will be stored in that VAO. This makes switching between different
@@ -502,6 +516,8 @@ int main()
 
 	glGenerateMipmap(GL_TEXTURE_2D);
 
+	//glEnable(GL_BLEND);
+
 	//Black/White checkerboard
 	float pixels [] = 
 	{
@@ -509,8 +525,8 @@ int main()
 		1.0f, 1.0f, 1.0f,	0.0f, 0.0f, 0.0f
 	};
 
-	int width, height;
-	unsigned char* image = SOIL_load_image("img.png", &width, &height, 0, SOIL_LOAD_RGB);
+	int width, height, texChannels;
+	unsigned char* image = stbi_load("../../Data/HaloInfinite.png", &width, &height, nullptr, STBI_rgb);
 
 	//The first parameter after the texture target is the level of detail, where 0 is the base image.
 	//This parameter can be used to load your own mipmap images.
@@ -521,7 +537,16 @@ int main()
 	//The next 2 parameters describe the format of the pixels in the array that will be loaded.
 	//The final parameters specifies the array itself.
 	//the functions begins loading the image at coordinate (0,0) so pay attention to this.
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_RGB, GL_FLOAT, pixels);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+
+	//You can clean up the image data right after you've loaded into the texture.
+	stbi_image_free(image);
+
+	//As mentioned before, OpenGL expects the first pixel to be located in the bottom-left corner, 
+	//which means that textures will be flipped when loaded with STB directly. To counteract that, the code 
+	//will use flipped Y coordinates for texture coordinates from now on.
+	//That means that (0,0) will be assumed to be the top0left corner instead of the bottom-left. This practice might
+	//make texture coordinates more intuitive as a side-effect.
 
 	//But how is the pixel array itself established? Textures in graphics applications will usually be a lot more sophisticated than simple patterns and
 	//will be loaded from files. Best practice is to ave your files in a format that is natively supported by the hardware, but it may sometimes be more convenient to load
