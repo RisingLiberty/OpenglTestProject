@@ -594,6 +594,7 @@ int main()
 					running = false;
 				break;
 			}
+		}
 
 			//Changing the value of a uniform is just like setting vertex attributes, you first have to grab the location.
 			GLint uniColor = glGetUniformLocation(shaderProgram, "triangleColor");
@@ -623,7 +624,6 @@ int main()
 			//Swap buffers
 			window.display();
 
-		}
 	}
 
 	glDeleteProgram(shaderProgram);
