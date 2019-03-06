@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <thread>
+#include <iomanip>
 
 #if defined GL_TEST || defined INCLUDE_ALL
 #include <GLEW/glew.h>
@@ -23,6 +24,14 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
+
+#include <glm/glm.hpp>
+
+//Includes functions to ease the calculation of the view and projection matrices.
+#include <glm/gtc/matrix_transform.hpp>
+
+//adds functionality for converting a matrix object into a float array for usage in OpenGL
+#include <glm/gtc/type_ptr.hpp>
 
 #undef main
 
@@ -173,6 +182,8 @@ const char* vertexSource =
 "out vec3 Color;\n"
 "out vec2 Texcoord;"
 
+"uniform mat4 trans;"
+
 //Apart from regular C types, GLSL has built-in vector and matrix types
 //identified by vec* and mat* identifiers.
 //the values within these constructs is always a float.
@@ -193,7 +204,7 @@ const char* vertexSource =
 //because the position is needed for primitive assembly and many other built-in processes.
 //For these to function correctly, the last value w needs to have a value of 1.0f.
 //Other than that, you're free to do anything you want with the attributes.
-"gl_Position = vec4(position, 0.0f, 1.0f);\n"
+"gl_Position = trans * vec4(position, 0.0f, 1.0f);\n"
 "Color = color;\n"
 "Texcoord = texcoord;\n"
 "}\n";
@@ -497,7 +508,7 @@ int main()
 	//The amount of texture units supported differs per graphics card, but it will be at least 48.
 	//It is safe to say that you will never hit this limit in even the most extreme graphics applications
 
-	int width, height, texChannels;
+	int width, height;
 	unsigned char* image = stbi_load("../../Data/HaloInfinite.png", &width, &height, nullptr, STBI_rgb);
 
 	//The first parameter after the texture target is the level of detail, where 0 is the base image.
@@ -579,6 +590,17 @@ int main()
 	//textures from common image formats like JPG and PNG. Unfortunately OpenGL doesn't offer any helper functions to load pixels from these image files, 
 	//but that's where third-party libraries come in handy again!
 
+	GLint uniTrans = glGetUniformLocation(shaderProgram, "trans");
+
+	//the second parameter of the glUniformMatrix4fv functino specifies how many matrices are to be uploaded,
+	//because you can have arrays of matrices in GLSL.
+	//The third parameter specifies whether the specified matrix should be transposed before usage.
+	//This is related to the way matrices are stored as float arrays in memory.
+	//The last parameter specifies the matrix to upload, where the glm::value_ptr function converts the matrix class
+	//into an array of 16 (4x4) floats
+	//glUniformMatrix4fv(uniTrans, 1, GL_FALSE, glm::value_ptr(trans));
+
+
 	while (running)
 	{
 		sf::Event windowEvent;
@@ -606,7 +628,10 @@ int main()
 
 			float redValue = (sin(time) + 1.0f) * 0.5f;
 			
-			std::cout << redValue << std::endl;
+			glm::mat4 trans = glm::rotate(glm::mat4(1.0f), time * glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+			glUniformMatrix4fv(uniTrans, 1, GL_FALSE, glm::value_ptr(trans));
+
+			//std::cout << redValue << std::endl;
 
 			glUniform3f(uniColor, redValue, 0.0f, 0.0f);
 
