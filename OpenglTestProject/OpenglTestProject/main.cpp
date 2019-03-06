@@ -182,7 +182,9 @@ const char* vertexSource =
 "out vec3 Color;\n"
 "out vec2 Texcoord;"
 
-"uniform mat4 trans;"
+"uniform mat4 model;"
+"uniform mat4 view;"
+"uniform mat4 proj;"
 
 //Apart from regular C types, GLSL has built-in vector and matrix types
 //identified by vec* and mat* identifiers.
@@ -204,7 +206,7 @@ const char* vertexSource =
 //because the position is needed for primitive assembly and many other built-in processes.
 //For these to function correctly, the last value w needs to have a value of 1.0f.
 //Other than that, you're free to do anything you want with the attributes.
-"gl_Position = trans * vec4(position, 0.0f, 1.0f);\n"
+"gl_Position = proj * view * model * vec4(position, 0.0f, 1.0f);\n"
 "Color = color;\n"
 "Texcoord = texcoord;\n"
 "}\n";
@@ -590,7 +592,7 @@ int main()
 	//textures from common image formats like JPG and PNG. Unfortunately OpenGL doesn't offer any helper functions to load pixels from these image files, 
 	//but that's where third-party libraries come in handy again!
 
-	GLint uniTrans = glGetUniformLocation(shaderProgram, "trans");
+	GLint uniTrans = glGetUniformLocation(shaderProgram, "model");
 
 	//the second parameter of the glUniformMatrix4fv functino specifies how many matrices are to be uploaded,
 	//because you can have arrays of matrices in GLSL.
@@ -600,6 +602,39 @@ int main()
 	//into an array of 16 (4x4) floats
 	//glUniformMatrix4fv(uniTrans, 1, GL_FALSE, glm::value_ptr(trans));
 
+	//To create the view transformation, GLM offers the useful glm::lookAt function that simulates a moving camera.
+	//The first parameter specifies the position of the camera.
+	//The second parameter points to be to be centered on-screen
+	//the third parameter to the up axis.
+	//Here's the Z axis the up vector, which implies that the XY plane is the "ground"
+	glm::mat4 view = glm::lookAt(
+		glm::vec3(1.2f, 1.2f, 1.2f),
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(0.0f, 0.0f, 1.0f)
+	);
+
+	//Similarly, GLM comes with the glm::perspective function to create a perspective projection matrix.
+	//the first parameter is the vertical field-of-view.
+	//the second parameter the aspect ratio of the screen.
+	//the last 2 parameters are the near and far planes.
+
+	//Field-of-view defines the angle between the top and bottom of the 2D surface on which
+	//the world will be projected.
+	//zooming in games is often accomplished by decreasing this angle as opposed to moving the camera closer,
+	//because it more closely resembles real life.
+
+	//By decreasing the angle, you can imagine that the "rays" from the camera spread out less and
+	//thus cover a smaller area of the scene.
+
+	//The near and far planes are known as the clipping planes. any vertex closer to the camera
+	//than the near clipping plane and any vertex farther away than the far clipping plane is
+	//clipped as these influence the w value.
+	glm::mat4 proj = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 1.0f, 10.0f);
+	GLint uniProj = glGetUniformLocation(shaderProgram, "proj");
+	glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
+
+	GLint uniView = glGetUniformLocation(shaderProgram, "view");
+	glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
 	while (running)
 	{
