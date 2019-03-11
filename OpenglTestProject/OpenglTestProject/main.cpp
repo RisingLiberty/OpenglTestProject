@@ -227,6 +227,7 @@ const char* fragmentSource =
 
 "uniform sampler2D texHalo;\n"
 "uniform sampler2D texGoogle;\n"
+"uniform vec3 extraColor;\n"
 
 "void main()\n"
 "{\n"
@@ -238,6 +239,7 @@ const char* fragmentSource =
 //result in a mixture of both.
 "outColor = mix(colHalo, colGoogle, 0.5f);"
 "outColor *= vec4(Color, 1.0f);"
+"outColor += vec4(extraColor, 1.0f);"
 "}\n";
 
 #include <stdio.h>
@@ -740,7 +742,7 @@ int main()
 		}
 
 			//Changing the value of a uniform is just like setting vertex attributes, you first have to grab the location.
-			GLint uniColor = glGetUniformLocation(shaderProgram, "triangleColor");
+			GLint uniColor = glGetUniformLocation(shaderProgram, "extraColor");
 
 			//The values of uniforms are changed with any of the glUnifromXY functions, where X is the number of
 			//components and Y is the type. Common types are f(float), d(double) and i(integer)
