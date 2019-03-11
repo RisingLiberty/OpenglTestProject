@@ -239,7 +239,7 @@ const char* fragmentSource =
 //result in a mixture of both.
 "outColor = mix(colHalo, colGoogle, 0.5f);"
 "outColor *= vec4(Color, 1.0f);"
-"outColor += vec4(extraColor, 1.0f);"
+"outColor *= vec4(extraColor, 1.0f);"
 "}\n";
 
 #include <stdio.h>
@@ -333,7 +333,14 @@ int main()
      0.5f,  0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 0.0f,
      0.5f,  0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 0.0f,
     -0.5f,  0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 0.0f,
-    -0.5f,  0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 1.0f
+    -0.5f,  0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 1.0f,
+
+	-1.0f, -1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+	 1.0f, -1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+	 1.0f,  1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,
+	 1.0f,  1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,
+	-1.0f,  1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+	-1.0f, -1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f
 };
 
 	GLuint indices[]
@@ -656,7 +663,7 @@ int main()
 	//the third parameter to the up axis.
 	//Here's the Z axis the up vector, which implies that the XY plane is the "ground"
 	glm::mat4 view = glm::lookAt(
-		glm::vec3(1.2f, 1.2f, 1.2f),
+		glm::vec3(1.2f, -5.0f, 2.2f),
 		glm::vec3(0.0f, 0.0f, 0.0f),
 		glm::vec3(0.0f, 0.0f, 1.0f)
 	);
@@ -724,6 +731,45 @@ int main()
 	//Eg: if you do'nt want stencils with a value lower than 2 to be affected, you would use:
 	//glStencilFunc(GL_GEQUAL, 2, 0xFF);
 
+	//The mask is set to all ones(in case of an 8 bit stencil buffer), so it will not affect the test.
+
+	//the glStencilOp call specifies what should happen to stencil values depending on the outcome of the stencil and depth tests.
+	//The parameters are:
+	//sfail: Action to take if the stencil test fails.
+	//dpfail: action to take if the stencil test is successful, but the depth test fails
+	//dppass: action to take if both the stencil test and depth test pass.
+
+	//Stencil values van be modified in the following ways:
+	//GL_KEEP: the current value is kept
+	//GL_ZERO: the stencil value is set to 0
+	//GL_REPLACE: the stencil value is set to the reference value in the glStencilFunc call.
+	//GL_INCR: the stencil value increased by 1 if is lower than the maximum value
+	//GL_INCR_WRAP: Same as GL_INCR, with the exception that the value is set to 0 if the maximum value is exceeded.
+	//GL_DESC: the stencil value is decreased by1 if it is higher than 0
+	//GL_DESC_WRAP: same as GL_DESC, with the exception that the value is set to the maximum value if the current value is 0
+	//GL_INVERT: A bitwise invert is applied to the value.
+
+	//finally, glStencilMask can be used to control the bits that are written to the stencil buffer when an operation is run.
+	//The default value is all ones, which means that the outcome of any operation is unaffected.
+	//if you want to set all the stencil values in a rectangular area to 1, you would use the following calls:
+	//glStencilFunc(GL_ALWAYS, 1, 0xFF);
+	//glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+	//glStencilMask(0xFF);
+
+	//in this case the rectangle shouldn't actually be drawn to the color buffer, 
+	//since it is only used to determine which stencil values should be affected
+
+	//Disable all color channels
+	//glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+	//glDepthMask(GL_FALSE);
+
+	//If you use this call to set the test function, the stencil test will only pass for pixels
+	//with a stencil value equal to 1. a fragment will only be dawn if passes both stencil and depth test.
+	//glStencilFunc(GL_EQUAL, 1, 0xFF);
+
+	//One small detail that is easy to overlook is that the cube draw call could still affect values in the stencil buffer.
+	//This problem can be solved by setting the stencil bit mask to all zeroes, which effectively disables stencil writing.
+
 	while (running)
 	{
 		sf::Event windowEvent;
@@ -756,10 +802,10 @@ int main()
 
 			//std::cout << redValue << std::endl;
 
-			glUniform3f(uniColor, redValue, 0.0f, 0.0f);
+			glUniform3f(uniColor, 1.0f, 1.0f, 1.0f);
 
 			//Clear the screen to black
-			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+			glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			
 			//The first parameter is the same as with glDrawArray, but the other ones all refer to the element buffer.
@@ -768,9 +814,43 @@ int main()
 			//The last parameter specifies the offset.
 			//The only real difference is that you're talking about indices instead of vertices now.
 			//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+			//to make a reflection:
+			//1) Draw regular cube
+			//2) enable sencil testing and set test function and operations to write ones to all selected stencils
+			//3) draw floor
+			//4) set stencil function to pass if stencil value equals 1
+			//5) draw inverted cube
+			//6) disbale stencil testing
+
+			//draw regular cube
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 			
+
+			glEnable(GL_STENCIL_TEST);
+
+			glUniform3f(uniColor, 0.5f, 0.5f, 0.5f);
+			//Draw plane
+			glStencilFunc(GL_ALWAYS, 1, 0xFF); //Set any stencil to 1
+			glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+			glStencilMask(0xFF); //Write to stencil buffer.
+			glDepthMask(GL_FALSE); //Don't write to depth buffer
+			glClear(GL_STENCIL_BUFFER_BIT); //clear stencil buffer (0 by default)
+			glDrawArrays(GL_TRIANGLES, 36, 6);
+
+			//Draw cube reflection
+			glStencilFunc(GL_EQUAL, 1, 0xFF);
+			glStencilMask(0x00); //don't write anything to stencil buffer
+			glDepthMask(GL_TRUE); //Write to depth buffer
+
+			trans = glm::scale(glm::translate(trans, glm::vec3(0, 0, -1)), glm::vec3(1, 1, -1));
 			
+			glUniformMatrix4fv(uniTrans, 1, GL_FALSE, glm::value_ptr(trans));
+			//draw second cube
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+						
+			glDisable(GL_STENCIL_TEST);
+
 			//Swap buffers
 			window.display();
 
