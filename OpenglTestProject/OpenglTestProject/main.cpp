@@ -174,7 +174,7 @@ const char* vertexSource =
 "#version 150 core\n"
 
 //Next we specify that there is only 1 attribute, the position
-"in vec2 position;\n"
+"in vec3 position;\n"
 "in vec3 color;\n"
 "in vec2 texcoord;\n"
 
@@ -206,7 +206,7 @@ const char* vertexSource =
 //because the position is needed for primitive assembly and many other built-in processes.
 //For these to function correctly, the last value w needs to have a value of 1.0f.
 //Other than that, you're free to do anything you want with the attributes.
-"gl_Position = proj * view * model * vec4(position, 0.0f, 1.0f);\n"
+"gl_Position = proj * view * model * vec4(position, 1.0f);\n"
 "Color = color;\n"
 "Texcoord = texcoord;\n"
 "}\n";
@@ -237,6 +237,7 @@ const char* fragmentSource =
 //A value of 0.0 will result in the first value, a value of 1.0 will result in the second value and a value in between will
 //result in a mixture of both.
 "outColor = mix(colHalo, colGoogle, 0.5f);"
+"outColor *= vec4(Color, 1.0f);"
 "}\n";
 
 #include <stdio.h>
@@ -268,7 +269,7 @@ int main()
 	settings.majorVersion = 3;
 	settings.minorVersion = 2;
 
-	sf::Window window(sf::VideoMode(800, 600, 32), "OpenGL", sf::Style::Titlebar | sf::Style::Close, settings);
+	sf::Window window(sf::VideoMode(800, 600, 32), "OpenGL Test Project", sf::Style::Titlebar | sf::Style::Close, settings);
 
 	//Initialize GLEW
 	glewExperimental = GL_TRUE;
@@ -279,14 +280,59 @@ int main()
 	//The order in which the attributes appear doesn't matter, as long as it's the same for each vertex.
 	//the order of the vertices doesn't have to be sequential(i.e. the order in which shapes are formed),
 	//but this requires us to provide extra data in the form of an element buffer.
-	float vertices[] =
-	{
+	// float vertices[] =
+	// {
 	//	Position	    	   Color			  UV
-	   -0.5f,  0.5f,     1.0f, 0.0f, 0.0f,    0.0f, 0.0f, //Vertex 1(x,y,r,g,b)
-		0.5f,  0.5f,     0.0f, 1.0f, 0.0f,    1.0f, 0.0f, //Vertex 2(x,y,r,g,b)
-	    0.5f, -0.5f,     0.0f, 0.0f, 1.0f,	  1.0f, 1.0f, //Vertex 3(x,y,r,g,b)
-	   -0.5f, -0.5f,     1.0f, 1.0f, 1.0f,    0.0f, 1.0f  //Vertex 4(x,y,r,g,b)
-	};
+	   // -0.5f,  0.5f, 0.0f,    1.0f, 0.0f, 0.0f,    0.0f, 0.0f, //Vertex 1(x,y,r,g,b)
+		// 0.5f,  0.5f, 0.0f,    0.0f, 1.0f, 0.0f,    1.0f, 0.0f, //Vertex 2(x,y,r,g,b)
+	    // 0.5f, -0.5f, 0.0f,    0.0f, 0.0f, 1.0f,	   1.0f, 1.0f, //Vertex 3(x,y,r,g,b)
+	   // -0.5f, -0.5f, 0.0f,    1.0f, 1.0f, 1.0f,    0.0f, 1.0f  //Vertex 4(x,y,r,g,b)
+	// };
+	
+	float vertices[] = {
+	//	Position	    		   Color			  UV
+    -0.5f, -0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 0.0f,
+     0.5f, -0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 0.0f,
+     0.5f,  0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 1.0f,
+    -0.5f,  0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 0.0f,
+
+    -0.5f, -0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 0.0f,
+     0.5f, -0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 1.0f,
+    -0.5f,  0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 0.0f,
+
+    -0.5f,  0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 0.0f,
+
+     0.5f,  0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 0.0f,
+     0.5f,  0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 0.0f,
+
+    -0.5f, -0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 0.0f,
+     0.5f, -0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 0.0f,
+    -0.5f, -0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 0.0f,
+    -0.5f, -0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 1.0f,
+
+    -0.5f,  0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 1.0f
+};
 
 	GLuint indices[]
 	{
@@ -440,7 +486,7 @@ int main()
 	//It is important to know that this function will store not only the stride and the offset, but also the VBO that is currently bound to GL_ARRAY_BUFFER.
 	//that means that you don't have to explicitly bind the correct VBO when the actual drawing functions are called.
 	//This also implies that you can use a different VBO for each attribute
-	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 7 * sizeof(float), 0);
+	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), 0);
 	
 	//Last but not least, the vertexattribarray should be enabled.
 	glEnableVertexAttribArray(posAttrib);
@@ -451,12 +497,12 @@ int main()
 	//The fifth paramter is set to 5*sizeof(float) now, because each vertex consists of 5 floating point atttribute values.
 	//The offset of 2*sizeof(float) for the color attribute is there because each vertex starts with 2 floating point
 	//values for the position that it has to skip over.
-	glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void*)(2 * sizeof(float)));
+	glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(colAttrib);
 
 	GLint texAttrib = (glGetAttribLocation(shaderProgram, "texcoord"));
 	glEnableVertexAttribArray(texAttrib);
-	glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void*)(5 * sizeof(float)));
+	glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
 
 	//As soon as you've bound a certain VAO, every time you call glVertexAttribPointer,
 	//that information will be stored in that VAO. This makes switching between different
@@ -636,6 +682,46 @@ int main()
 	GLint uniView = glGetUniformLocation(shaderProgram, "view");
 	glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
+	//Z-buffering is a way of keeping track of the depth of every pixel on the screen.
+	//the depth is an increasing function of the distance between the screen plane and
+	//a fragment that has been drawn. That means that the fragments on the sides of the cube
+	//further away from the viewer have a higher depth value, whereas fragments closer have a lower depth value.
+	
+	//If the depth is stored along with the color when a fragment is written, fragments drawn later
+	//Can compare theri depth to the exisiting depth to determine if the new fragment is closer to the viewer than the old fragment.
+	//if that is the case, it should be drawn over and otherwise it can simply be discarded. This is known as depth testing.
+	
+	//OpenGL offers a way to store these depth values in an extra buffer, called the depth buffer, and perform the required check 
+	//for framgents automatically. //The framgent shader will not run for fragments that are invisible, whcih can have a significant impact
+	//on performace. This functionality can be enabled by calling glEnable.
+	
+	glEnable(GL_DEPTH_TEST);
+
+	//the default clear value of the depth is 1.0f, which is equal to the depth of your far clipping plane.
+	//And thus the furthest depth that can be represented. All fragments will be closer than that, so they will no
+	//longer be discarded.
+
+	//THE STENCIL BUFFER
+	
+	//The stencil buffer is an optional extension of the depth buffer that gives you more control
+	//over the question of which fragments should be drawn and which shouldn't. Like the depth buffer
+	//a value is stored for every pixel,but this time you get to control when and how this value changes.
+	//and when a fragment should be drawn depending on this value. Note that if the depth test fails, the stencil
+	//test no longer determines wheter a fragment is drawn or not, but these fragments can still affect values in the
+	//stencil buffer.
+	
+	//Stencil testing is enabled with a call to glEnable, just like depth testing.
+	//glEnable(GL_STENCIL_TEST);
+
+	//Important functions:
+	//glStencilFunc, glStencilOp and glStencilMask.
+	//glStencilFunc:
+	//func: the test function: can be GL_NEVER, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL, GL_EQUAL, GLNOTEQUAL and GL_ALWAYS
+	//ref: a value to compare the stencil value to using the test function
+	//mask: a bitwise AND operation is performed on the stencil value and reference value with this mask value before comparing them.
+	//Eg: if you do'nt want stencils with a value lower than 2 to be affected, you would use:
+	//glStencilFunc(GL_GEQUAL, 2, 0xFF);
+
 	while (running)
 	{
 		sf::Event windowEvent;
@@ -672,15 +758,17 @@ int main()
 
 			//Clear the screen to black
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-			glClear(GL_COLOR_BUFFER_BIT);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			
 			//The first parameter is the same as with glDrawArray, but the other ones all refer to the element buffer.
 			//The second parameter specifies the number of indices to draw
 			//the third parameter specifies the type of the element data
 			//The last parameter specifies the offset.
 			//The only real difference is that you're talking about indices instead of vertices now.
-			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-		
+			//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+			
+			
 			//Swap buffers
 			window.display();
 
