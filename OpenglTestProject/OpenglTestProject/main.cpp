@@ -186,6 +186,7 @@ const char* vertexSource =
 "uniform mat4 model;"
 "uniform mat4 view;"
 "uniform mat4 proj;"
+"uniform float time;"
 
 // Apart from regular C types, GLSL has built-in vector and matrix types
 // identified by vec* and mat* identifiers.
@@ -196,6 +197,19 @@ const char* vertexSource =
 "void main()\n"
 "{\n"
 
+"float redValue = color.r + 0.1f * time;"
+"float redSin = sin(redValue);" //should be 0
+"redSin *= 0.5f;"
+"redSin += 0.5f;"
+
+//"float blueSin = cos(time);" //should be 1
+//"blueSin *= 0.5f;"
+//"blueSin += 0.5f;"
+
+"float red = redSin;" //should be 0
+//"float blue = blueSin;" //should be 1
+
+"float blue = 1.0f - red;"
 // You can be quite creative when working with vertex types.
 // In the example above a shortcuts was used to set the first two components of the vec4
 // to those of vec2. the following 2 lines are equal
@@ -208,7 +222,8 @@ const char* vertexSource =
 // For these to function correctly, the last value w needs to have a value of 1.0f.
 // Other than that, you're free to do anything you want with the attributes.
 "gl_Position = proj * view * model * vec4(position, 1.0f);\n"
-"Color = color;\n"
+"Color = vec3(red, color.g, blue);\n"
+//"Color = color;"
 "Texcoord = texcoord;\n"
 //"Depth = gl_Position.z;\n"
 "}\n";
@@ -241,8 +256,9 @@ const char* fragmentSource =
 // A value of 0.0 will result in the first value, a value of 1.0 will result in the second value and a value in between will
 // result in a mixture of both.
 "outColor = mix(colHalo, colGoogle, 0.5f);"
+"outColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);"
 "outColor *= vec4(Color, 1.0f);"
-"outColor *= vec4(extraColor, 1.0f);"
+"//outColor *= vec4(extraColor, 1.0f);\n"
 //"outColor = vec4(1 - Depth, 1 - Depth, 1 - Depth, 1.0f);" // display depth
 "}\n";
 
@@ -267,19 +283,22 @@ const float blurSizeH = 1.0f / 800.0f;
 const float blurSizeV = 1.0f / 800.0f;
 void main()
 {
-vec4 top = texture(texFramebuffer, vec2(Texcoord.x, Texcoord.y + 1.0 / 200.0));
-vec4 bottom = texture(texFramebuffer, vec2(Texcoord.x, Texcoord.y - 1.0 / 200.0));
-vec4 left = texture(texFramebuffer, vec2(Texcoord.x - 1.0 / 300.0, Texcoord.y));
-vec4 right = texture(texFramebuffer, vec2(Texcoord.x + 1.0 / 300.0, Texcoord.y));
-vec4 topLeft = texture(texFramebuffer, vec2(Texcoord.x - 1.0 / 300.0, Texcoord.y + 1.0 / 200.0f));
-vec4 topRight = texture(texFramebuffer, vec2(Texcoord.x + 1.0 / 300.0, Texcoord.y + 1.0 / 200.0f));
-vec4 bottomLeft = texture(texFramebuffer, vec2(Texcoord.x - 1.0 / 300.0, Texcoord.y - 1.0 / 200.0f));
-vec4 bottomRight = texture(texFramebuffer, vec2(Texcoord.x + 1.0 / 300.0, Texcoord.y - 1.0 / 200.0f));
 
-vec4 sx = -topLeft - 2 * left - bottomLeft + topRight + 2 * right + bottomRight;
-vec4 sy = -topLeft - 2 * top - topRight + bottomLeft + 2 * bottom + bottomRight;
-vec4 sobel = sqrt(sx * sx + sy * sy);
-outColor = sobel;
+outColor = texture(texFramebuffer, Texcoord);
+
+//vec4 top = texture(texFramebuffer, vec2(Texcoord.x, Texcoord.y + 1.0 / 200.0));
+//vec4 bottom = texture(texFramebuffer, vec2(Texcoord.x, Texcoord.y - 1.0 / 200.0));
+//vec4 left = texture(texFramebuffer, vec2(Texcoord.x - 1.0 / 300.0, Texcoord.y));
+//vec4 right = texture(texFramebuffer, vec2(Texcoord.x + 1.0 / 300.0, Texcoord.y));
+//vec4 topLeft = texture(texFramebuffer, vec2(Texcoord.x - 1.0 / 300.0, Texcoord.y + 1.0 / 200.0f));
+//vec4 topRight = texture(texFramebuffer, vec2(Texcoord.x + 1.0 / 300.0, Texcoord.y + 1.0 / 200.0f));
+//vec4 bottomLeft = texture(texFramebuffer, vec2(Texcoord.x - 1.0 / 300.0, Texcoord.y - 1.0 / 200.0f));
+//vec4 bottomRight = texture(texFramebuffer, vec2(Texcoord.x + 1.0 / 300.0, Texcoord.y - 1.0 / 200.0f));
+//
+//vec4 sx = -topLeft - 2 * left - bottomLeft + topRight + 2 * right + bottomRight;
+//vec4 sy = -topLeft - 2 * top - topRight + bottomLeft + 2 * bottom + bottomRight;
+//vec4 sobel = sqrt(sx * sx + sy * sy);
+//outColor = sobel;
 
 // blur
 //vec4 sum = vec4(0.0f);
@@ -319,54 +338,66 @@ float quadVertices[] =
 
 float vertices[] = {
 	// 	Position	    		   Color			  UV
-	-0.5f, -0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 0.0f,
-	 0.5f, -0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 0.0f,
-	 0.5f,  0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 1.0f,
-	 0.5f,  0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 1.0f,
-	-0.5f,  0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 1.0f,
-	-0.5f, -0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 0.0f,
 
-	-0.5f, -0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 0.0f,
-	 0.5f, -0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 0.0f,
-	 0.5f,  0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 1.0f,
-	 0.5f,  0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 1.0f,
-	-0.5f,  0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 1.0f,
-	-0.5f, -0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 0.0f,
+	//middle       0.5f, 0.0f, 0.0f,
+	//red          0.0f, 0.0f, 0.0f,
+	//blue         1.0f, 0.0f, 0.0f,
 
-	-0.5f,  0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 0.0f,
-	-0.5f,  0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 1.0f,
-	-0.5f, -0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 1.0f,
-	-0.5f, -0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 1.0f,
-	-0.5f, -0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 0.0f,
-	-0.5f,  0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 0.0f,
 
-	 0.5f,  0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 0.0f,
-	 0.5f,  0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 1.0f,
-	 0.5f, -0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 1.0f,
-	 0.5f, -0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 1.0f,
-	 0.5f, -0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 0.0f,
-	 0.5f,  0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 0.0f,
+	//bottom
+	-0.5f, -0.5f, -0.5f,	 0.5f, 0.0f, 0.0f,	 0.0f, 0.0f,
+	 0.5f, -0.5f, -0.5f,	 0.5f, 0.0f, 0.0f,	 1.0f, 0.0f,
+	 0.5f,  0.5f, -0.5f,	 0.5f, 0.0f, 0.0f,	 1.0f, 1.0f,
+	 0.5f,  0.5f, -0.5f,	 0.5f, 0.0f, 0.0f,	 1.0f, 1.0f,
+	-0.5f,  0.5f, -0.5f,	 0.8f, 0.0f, 0.0f,	 0.0f, 1.0f,
+	-0.5f, -0.5f, -0.5f,	 0.5f, 0.0f, 0.0f,	 0.0f, 0.0f,
+			
+	//top
+	-0.5f, -0.5f,  0.5f,	 0.5f, 0.0f, 0.0f,	 0.0f, 0.0f, //middle
+	 0.5f, -0.5f,  0.5f,	 0.0f, 0.0f, 0.0f,	 1.0f, 0.0f, //blue corner
+	 0.5f,  0.5f,  0.5f,	 0.5f, 0.0f, 0.0f,	 1.0f, 1.0f, //middle
+	 0.5f,  0.5f,  0.5f,	 0.5f, 0.0f, 0.0f,	 1.0f, 1.0f, //midle
+	-0.5f,  0.5f,  0.5f,	 0.5f, 0.0f, 0.0f,	 0.0f, 1.0f, //red corner
+	-0.5f, -0.5f,  0.5f,	 0.5f, 0.0f, 0.0f,	 0.0f, 0.0f, //middle
+							 
+	//Left
+	-0.5f,  0.5f,  0.5f,	 0.5f, 0.0f, 0.0f,	 1.0f, 0.0f,
+	-0.5f,  0.5f, -0.5f,	 0.8f, 0.0f, 0.0f,	 1.0f, 1.0f,
+	-0.5f, -0.5f, -0.5f,	 0.5f, 0.0f, 0.0f,	 0.0f, 1.0f,
+	-0.5f, -0.5f, -0.5f,	 0.5f, 0.0f, 0.0f,	 0.0f, 1.0f,
+	-0.5f, -0.5f,  0.5f,	 0.5f, 0.0f, 0.0f,	 0.0f, 0.0f,
+	-0.5f,  0.5f,  0.5f,	 0.5f, 0.0f, 0.0f,	 1.0f, 0.0f,
+							 
+	//right						
+	 0.5f,  0.5f,  0.5f,	 0.5f, 0.0f, 0.0f,	 1.0f, 0.0f,
+	 0.5f,  0.5f, -0.5f,	 0.5f, 0.0f, 0.0f,	 1.0f, 1.0f,
+	 0.5f, -0.5f, -0.5f,	 0.5f, 0.0f, 0.0f,	 0.0f, 1.0f,
+	 0.5f, -0.5f, -0.5f,	 0.5f, 0.0f, 0.0f,	 0.0f, 1.0f,
+	 0.5f, -0.5f,  0.5f,	 0.0f, 0.0f, 0.0f,	 0.0f, 0.0f,
+	 0.5f,  0.5f,  0.5f,	 0.5f, 0.0f, 0.0f,	 1.0f, 0.0f,
+	
+	//back
+	-0.5f, -0.5f, -0.5f,	 0.5f, 0.0f, 0.0f,	 0.0f, 1.0f,
+	 0.5f, -0.5f, -0.5f,	 0.5f, 0.0f, 0.0f,	 1.0f, 1.0f,
+	 0.5f, -0.5f,  0.5f,	 0.0f, 0.0f, 0.0f,	 1.0f, 0.0f,
+	 0.5f, -0.5f,  0.5f,	 0.0f, 0.0f, 0.0f,	 1.0f, 0.0f,
+	-0.5f, -0.5f,  0.5f,	 0.5f, 0.0f, 0.0f,	 0.0f, 0.0f,
+	-0.5f, -0.5f, -0.5f,	 0.5f, 0.0f, 0.0f,	 0.0f, 1.0f,
 
-	-0.5f, -0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 1.0f,
-	 0.5f, -0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 1.0f,
-	 0.5f, -0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 0.0f,
-	 0.5f, -0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 0.0f,
-	-0.5f, -0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 0.0f,
-	-0.5f, -0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 1.0f,
+	//front					 
+	-0.5f,  0.5f, -0.5f,	 0.8f, 0.0f, 0.0f,	 0.0f, 1.0f,
+	 0.5f,  0.5f, -0.5f,	 0.5f, 0.0f, 0.0f,	 1.0f, 1.0f,
+	 0.5f,  0.5f,  0.5f,	 0.5f, 0.0f, 0.0f,	 1.0f, 0.0f,
+	 0.5f,  0.5f,  0.5f,	 0.5f, 0.0f, 0.0f,	 1.0f, 0.0f,
+	-0.5f,  0.5f,  0.5f,	 0.5f, 0.0f, 1.0f,	 0.0f, 0.0f,
+	-0.5f,  0.5f, -0.5f,	 0.8f, 0.0f, 0.0f,	 0.0f, 1.0f,
 
-	-0.5f,  0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 1.0f,
-	 0.5f,  0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 1.0f,
-	 0.5f,  0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 0.0f,
-	 0.5f,  0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 1.0f, 0.0f,
-	-0.5f,  0.5f,  0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 0.0f,
-	-0.5f,  0.5f, -0.5f,	 1.0f, 1.0f, 1.0f,	 0.0f, 1.0f,
-
-	-1.0f, -1.0f, -0.5f,	 0.0f, 0.0f, 0.0f,	 0.0f, 0.0f,
-	 1.0f, -1.0f, -0.5f,	 0.0f, 0.0f, 0.0f,	 1.0f, 0.0f,
-	 1.0f,  1.0f, -0.5f,	 0.0f, 0.0f, 0.0f,	 1.0f, 1.0f,
-	 1.0f,  1.0f, -0.5f,	 0.0f, 0.0f, 0.0f,	 1.0f, 1.0f,
-	-1.0f,  1.0f, -0.5f,	 0.0f, 0.0f, 0.0f,	 0.0f, 1.0f,
-	-1.0f, -1.0f, -0.5f,	 0.0f, 0.0f, 0.0f,	 0.0f, 0.0f
+	-1.0f, -1.0f, -0.5f,	 0.5f, 0.0f, 0.0f,	 0.0f, 0.0f, //middle
+	 1.0f, -1.0f, -0.5f,	 0.8f, 0.0f, 0.0f,	 1.0f, 0.0f, //red corner
+	 1.0f,  1.0f, -0.5f,	 0.5f, 0.0f, 0.0f,	 1.0f, 1.0f, //middle
+	 1.0f,  1.0f, -0.5f,	 0.5f, 0.0f, 0.0f,	 1.0f, 1.0f, //middle
+	-1.0f,  1.0f, -0.5f,	 0.0f, 0.0f, 1.0f,	 0.0f, 1.0f, //blue corner
+	-1.0f, -1.0f, -0.5f,	 0.5f, 0.0f, 0.0f,	 0.0f, 0.0f  //middle
 };
 
 GLuint indices[]
@@ -952,6 +983,8 @@ int main()
 	// the last parameter specifies the number of vertices to process.
 	bool running = true;
 
+	GLuint uniTime = glGetUniformLocation(sceneShaderProgram, "time");
+
 	while (running)
 	{
 		sf::Event windowEvent;
@@ -990,7 +1023,7 @@ int main()
 		auto t_now = std::chrono::high_resolution_clock::now();
 		float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_now - t_start).count();
 
-		glm::mat4 model = glm::rotate(glm::mat4(1.0f), time * glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		glm::mat4 model = glm::rotate(glm::mat4(1.0f), time * 0.1f * glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
 
 		// Changing the value of a uniform is just like setting vertex attributes, you first have to grab the location.
@@ -1028,7 +1061,7 @@ int main()
 		glDepthMask(GL_FALSE); // Don't write to depth buffer
 		glClear(GL_STENCIL_BUFFER_BIT); // clear stencil buffer (0 by default)
 
-		glDrawArrays(GL_TRIANGLES, 36, 6);
+		//glDrawArrays(GL_TRIANGLES, 36, 6);
 
 		// Draw cube reflection
 		glStencilFunc(GL_EQUAL, 1, 0xFF);
@@ -1039,9 +1072,11 @@ int main()
 
 		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
 		
+		glUniform1f(uniTime, time);
+
 		// draw second cube
 		glUniform3f(uniColor, 0.3f, 0.3f, 0.3f);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
+		//glDrawArrays(GL_TRIANGLES, 0, 36);
 		glUniform3f(uniColor, 1.0f, 1.0f, 1.0f);
 
 		glDisable(GL_STENCIL_TEST);
@@ -1056,6 +1091,14 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, texColorBuffer);
 
 		glDrawArrays(GL_TRIANGLES, 0, 6);
+
+		float redValue = 1.0f + 0.1f * time;
+		float redSin = sin(redValue); //should be 0
+		redSin *= 0.5f;
+		redSin += 0.5f;
+
+		std::cout << std::setprecision(2);
+		std::cout << "red:\t" << redSin << "\t\t" << "blue:\t" << 1.0f - redSin << std::endl;
 
 		// The 3D and 2D drawing operations both have their own vertex array (cube vs quad),
 		// shader program (3D vs 2D post-processing) and textures.
