@@ -167,157 +167,333 @@ int SdlTest()
 
 #endif
 
-const char* vertexSource =
-// from OpenGL version 3.3 shader version is equal to OpenGL version
-// The #version preprocessor directive is used to indicate that the code that follows i GLSL 1.50 code
-// using OpenGL's core profile.
-"#version 150 core\n"
+// don't use endl
+// use \n instead
+#define endl string("\n")
 
-// Next we specify that there is only 1 attribute, the position
-"in vec3 position;\n"
-"in vec3 color;\n"
-"in vec2 texcoord;\n"
+//const char* vertexSource =
+//// from OpenGL version 3.3 shader version is equal to OpenGL version
+//// The #version preprocessor directive is used to indicate that the code that follows i GLSL 1.50 code
+//// using OpenGL's core profile.
+//"#version 150 core\n"
+//
+//// Next we specify that there is only 1 attribute, the position
+//"in vec3 position;\n"
+//"in vec3 color;\n"
+//"in vec2 texcoord;\n"
+//
+//// The color to output to the fragment shader
+//"out vec3 Color;\n"
+//"out vec2 Texcoord;\n"
+//"out float Depth;\n"
+//
+//"uniform mat4 model;"
+//"uniform mat4 view;"
+//"uniform mat4 proj;"
+//"uniform float time;"
+//
+//// Apart from regular C types, GLSL has built-in vector and matrix types
+//// identified by vec* and mat* identifiers.
+//// the values within these constructs is always a float.
+//// The number after vec specifies the number of components(x,y,z,w) and
+//// the number after mat specifies the number of rows/columns.
+//// Since the position attribute consists of only an x and y coordinate, vec2 is perfect
+//"void main()\n"
+//"{\n"
+//
+//"float redValue = color.r + 0.1f * time;"
+//"float redSin = sin(redValue);" //should be 0
+//"redSin *= 0.5f;"
+//"redSin += 0.5f;"
+//
+////"float blueSin = cos(time);" //should be 1
+////"blueSin *= 0.5f;"
+////"blueSin += 0.5f;"
+//
+//"float red = redSin;" //should be 0
+////"float blue = blueSin;" //should be 1
+//
+//"float blue = 1.0f - red;"
+//// You can be quite creative when working with vertex types.
+//// In the example above a shortcuts was used to set the first two components of the vec4
+//// to those of vec2. the following 2 lines are equal
+//// gl_Position = vec(position, 0.0f, 1.0f);
+//// gl_Position = vec(position.x, position.y, 0.0f, 1.0f);
+//// When you're working with colors, you can also access the individual components with r, g, b and a
+//// instead of x, y, z and w. this makes no difference and can help with clarity.
+//// The final position of the vertex assigned to the special gl_Position variable,
+//// because the position is needed for primitive assembly and many other built-in processes.
+//// For these to function correctly, the last value w needs to have a value of 1.0f.
+//// Other than that, you're free to do anything you want with the attributes.
+//"gl_Position = proj * view * model * vec4(position, 1.0f);\n"
+//"Color = vec3(red, color.g, blue);\n"
+////"Color = color;"
+//"Texcoord = texcoord;\n"
+////"Depth = gl_Position.z;\n"
+//"}\n";
+//
+//const char* fragmentSource =
+//"#version 150 core\n"
+//
+//// You'll immediately notice that we're not using some built-in variable for outputting the color, say gl_FragColor.
+//// This is because a fragment shader can in fact output multiple colors.
+//// The outColor variable uses the type vec4, because each color consists of a red, green, blue and alpha component.
+//// Colors in OpenGL are generally represented as floating point number between 0.0 and 1.0 instead of the common 0 and 255.
+//
+//// Vertex attributes are not the only way to pass data to shader programs. There is another way to pass data to shaders called uniforms.
+//// These are essentially global variables, having the same value for all vertices and/or fragments.
+//"in vec3 Color;\n"
+//"in vec2 Texcoord;\n"
+//"in float Depth;\n"
+//"out vec4 outColor;\n"
+//
+//"uniform sampler2D texHalo;\n"
+//"uniform sampler2D texGoogle;\n"
+//"uniform vec3 extraColor;\n"
+//
+//"void main()\n"
+//"{\n"
+//"vec4 colHalo = texture(texHalo, Texcoord);//  * vec4(Color, 1.0f);\n"
+//"vec4 colGoogle = texture(texGoogle, Texcoord);//  * vec4(Color, 1.0f);\n"
+//
+//// the mix function is a special GLSL function that linearly interpolates between 2 variables based on the third parameter.
+//// A value of 0.0 will result in the first value, a value of 1.0 will result in the second value and a value in between will
+//// result in a mixture of both.
+//"outColor = mix(colHalo, colGoogle, 0.5f);"
+//"outColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);"
+//"outColor *= vec4(Color, 1.0f);"
+//"//outColor *= vec4(extraColor, 1.0f);\n"
+////"outColor = vec4(1 - Depth, 1 - Depth, 1 - Depth, 1.0f);" // display depth
+//"}\n";
+//
+//const char* screenVertexSource =
+//"#version 150 core\n"
+//"in vec2 position;\n"
+//"in vec2 texCoord;\n"
+//"out vec2 Texcoord;\n"
+//"void main() \n"
+//"{\n"
+//"Texcoord = texCoord;\n"
+//"gl_Position = vec4(position, 0.0f, 1.0f);\n"
+//"}";
+//
+//const char* screenFragmentSource = 
+//R"glsl(
+//#version 150 core
+//in vec2 Texcoord;
+//out vec4 outColor;
+//uniform sampler2D texFramebuffer;
+//const float blurSizeH = 1.0f / 800.0f;
+//const float blurSizeV = 1.0f / 800.0f;
+//void main()
+//{
+//
+//outColor = texture(texFramebuffer, Texcoord);
+//
+////vec4 top = texture(texFramebuffer, vec2(Texcoord.x, Texcoord.y + 1.0 / 200.0));
+////vec4 bottom = texture(texFramebuffer, vec2(Texcoord.x, Texcoord.y - 1.0 / 200.0));
+////vec4 left = texture(texFramebuffer, vec2(Texcoord.x - 1.0 / 300.0, Texcoord.y));
+////vec4 right = texture(texFramebuffer, vec2(Texcoord.x + 1.0 / 300.0, Texcoord.y));
+////vec4 topLeft = texture(texFramebuffer, vec2(Texcoord.x - 1.0 / 300.0, Texcoord.y + 1.0 / 200.0f));
+////vec4 topRight = texture(texFramebuffer, vec2(Texcoord.x + 1.0 / 300.0, Texcoord.y + 1.0 / 200.0f));
+////vec4 bottomLeft = texture(texFramebuffer, vec2(Texcoord.x - 1.0 / 300.0, Texcoord.y - 1.0 / 200.0f));
+////vec4 bottomRight = texture(texFramebuffer, vec2(Texcoord.x + 1.0 / 300.0, Texcoord.y - 1.0 / 200.0f));
+////
+////vec4 sx = -topLeft - 2 * left - bottomLeft + topRight + 2 * right + bottomRight;
+////vec4 sy = -topLeft - 2 * top - topRight + bottomLeft + 2 * bottom + bottomRight;
+////vec4 sobel = sqrt(sx * sx + sy * sy);
+////outColor = sobel;
+//
+//// blur
+////vec4 sum = vec4(0.0f);
+////for (int x = -4; x <= 4; ++x)
+////{
+////for (int y = -4; y <= 4; ++y)
+////{
+////sum += texture(texFramebuffer, vec2(Texcoord.x + x * blurSizeH, Texcoord.y + y * blurSizeV)) / 81.0f;
+////}
+////}
+////outColor = sum;
+//
+//// gray scale:
+////outColor = texture(texFramebuffer, Texcoord);
+////float avg = (outColor.r + outColor.g + outColor.b) * 0.3f;
+////float avg = 0.2126f * outColor.r + 0.7152f * outColor.g + 0.0722 * outColor.b;
+//
+//
+//})glsl";
+//
+//const char* vertexShaderSrc = R"glsl(
+//#version 150 core
+//in vec2 pos;
+//in vec3 color;
+//in float sides;
+//
+//out vec3 vColor; // Output to geometry (or fragment) shader
+//out float vSides;
+//void main()
+//{
+//	gl_Position = vec4(pos, 0.0f, 1.0f);
+//	vColor = color;
+//	vSides = sides;
+//}
+//
+//)glsl";
+//
+//const char* geometryShaderSrc = R"glsl(
+//#version 150 core
+//
+//// Whereas a vertex shader processes vertices and a fragment shader processes fragments
+//// a geometry shader processes entire primitives. 
+//
+//// the following desribes what kind of primitives our shader should process.
+//// the avaibale types are the following:
+//// points - GL_POINTS(1 vertex)
+//// lines - GL_LINES, GL_LINE_STRIP, GL_LINE_LIST (2 vertices)
+//// lines_adjacency - GL_LINES_ADJACENCY, GL_LINE_STRIP_ADJACENCY (4 vertices)
+//// triangles - GL_TRIANGLES, GL_TRIANGLE_STRIP, GL_TRIANGLE_FAN (3 vertices)
+//// triangles_adjacency - GL_TRIANGLES_ADJACENCY, GL_TRIANGLE_STRIP_ADJACENCY (6 vertices)
+//layout(points) in;
+//
+//// The next line describes the output of the shader.
+//// what's interesting about geometry shaders is that they can output
+//// an entirely different type of geometry and the number of generated primiives can even vary!
+//// The second line specifies the output type and the maximum amount of vertices it can pass on.
+//// This is the maximum amount for the shader invocation, not for a single primitive (line strip in this case).
+//// the following output types ae available:
+//// points, line_strip, triangle_strip
+//
+////layout(line_strip, max_vertices = 2) out;
+//
+//// Rectangles
+////layout(triangle_strip, max_vertices = 5) out;
+//
+//// Circles
+//layout(line_strip, max_vertices = 64) out;
+//
+//// the gl_Position as set in the vertex shader, can be accessed using the gl_in array in the geometry shader.
+//// It is an array of structs that looks like this:
+//// in gl_PerVertex
+//// {
+////	vec4 gl_Position;
+////	float gl_PointSize;
+////	float gl_ClipDistance[];
+//// } gl_in[];
+//
+//in vec3 vColor[]; // Output from vertex shader for each vertex
+//in float vSides[];
+//
+//// Because the coor needs to be passed further down to the fragment shader
+//// We add it as output of the geometry shader. We can now assign values to it, just like we did earlier with gl_Position
+//out vec3 fColor; // Output to fragment shader
+//
+//const float PI = 3.1415926535;
+//
+//
+//void main()
+//{
+//	fColor = vColor[0];
+//
+//
+//// The geometry shader program can call 2 special functions to generate primitives,
+//// EmitVertex and EndPrimitve. Each time the progra call EmitVertex, a vertex is added
+//// to the current primitive. When all vertices have been added, the program calls
+//// EndPrimitive to generate the primitive.
+//
+//// Before calling emitVertex, the attributes of the vertex should be assigned to variables like
+//// gl_Positionm just like in the verex shader
+//
+////	gl_Position = gl_in[0].gl_Position + vec4(-0.1f, 0.0f, 0.0f, 0.0f);
+////	EmitVertex();
+//
+////	gl_Position = gl_in[0].gl_Position + vec4(0.1f, 0.0f, 0.0f, 0.0f);
+////	EmitVertex();
+//
+////	EndPrimitive();
+//
+//// Rectangles
+////	gl_Position = gl_in[0].gl_Position + vec4(-0.1, 0.1, 0.0, 0.0);
+////	EmitVertex();
+////	
+////	gl_Position = gl_in[0].gl_Position + vec4(0.1, 0.1, 0.0, 0.0);
+////	EmitVertex();
+////	
+////	gl_Position = gl_in[0].gl_Position + vec4(0.1, -0.1, 0.0, 0.0);
+////	EmitVertex();
+////	
+////	gl_Position = gl_in[0].gl_Position + vec4(-0.1, -0.1, 0.0, 0.0);
+////	EmitVertex();
+////	
+////	gl_Position = gl_in[0].gl_Position + vec4(-0.1, 0.1, 0.0, 0.0);
+////	EmitVertex();
+////	
+////	EndPrimitive();
+//
+//// Circles
+//	for (int i = 0; i <= vSides[0]; ++i)
+//	{
+//		// angle between each side in radians
+//		float ang = PI * 2.0f / vSides[0] * i;
+//
+//		// offset from center of point( 0.3 to accomodate for aspect ratio)
+//		vec4 offset = vec4(cos(ang) * 0.3f, -sin(ang) * 0.4f, 0.0, 0.0);
+//		gl_Position = gl_in[0].gl_Position + offset;
+//
+//		EmitVertex();
+//	}
+//
+//	EndPrimitive();
+//}
+//
+//)glsl";
+//
+//const char* fragmentShaderSrc = R"glsl(
+//#version 150 core
+//
+//in vec3 fColor;
+//
+//out vec4 outColor;
+//
+//void main()
+//{
+//	outColor = vec4(fColor, 1.0f);
+//}
+//
+//)glsl";
 
-// The color to output to the fragment shader
-"out vec3 Color;\n"
-"out vec2 Texcoord;\n"
-"out float Depth;\n"
-
-"uniform mat4 model;"
-"uniform mat4 view;"
-"uniform mat4 proj;"
-"uniform float time;"
-
-// Apart from regular C types, GLSL has built-in vector and matrix types
-// identified by vec* and mat* identifiers.
-// the values within these constructs is always a float.
-// The number after vec specifies the number of components(x,y,z,w) and
-// the number after mat specifies the number of rows/columns.
-// Since the position attribute consists of only an x and y coordinate, vec2 is perfect
-"void main()\n"
-"{\n"
-
-"float redValue = color.r + 0.1f * time;"
-"float redSin = sin(redValue);" //should be 0
-"redSin *= 0.5f;"
-"redSin += 0.5f;"
-
-//"float blueSin = cos(time);" //should be 1
-//"blueSin *= 0.5f;"
-//"blueSin += 0.5f;"
-
-"float red = redSin;" //should be 0
-//"float blue = blueSin;" //should be 1
-
-"float blue = 1.0f - red;"
-// You can be quite creative when working with vertex types.
-// In the example above a shortcuts was used to set the first two components of the vec4
-// to those of vec2. the following 2 lines are equal
-// gl_Position = vec(position, 0.0f, 1.0f);
-// gl_Position = vec(position.x, position.y, 0.0f, 1.0f);
-// When you're working with colors, you can also access the individual components with r, g, b and a
-// instead of x, y, z and w. this makes no difference and can help with clarity.
-// The final position of the vertex assigned to the special gl_Position variable,
-// because the position is needed for primitive assembly and many other built-in processes.
-// For these to function correctly, the last value w needs to have a value of 1.0f.
-// Other than that, you're free to do anything you want with the attributes.
-"gl_Position = proj * view * model * vec4(position, 1.0f);\n"
-"Color = vec3(red, color.g, blue);\n"
-//"Color = color;"
-"Texcoord = texcoord;\n"
-//"Depth = gl_Position.z;\n"
-"}\n";
-
-const char* fragmentSource =
-"#version 150 core\n"
-
-// You'll immediately notice that we're not using some built-in variable for outputting the color, say gl_FragColor.
-// This is because a fragment shader can in fact output multiple colors.
-// The outColor variable uses the type vec4, because each color consists of a red, green, blue and alpha component.
-// Colors in OpenGL are generally represented as floating point number between 0.0 and 1.0 instead of the common 0 and 255.
-
-// Vertex attributes are not the only way to pass data to shader programs. There is another way to pass data to shaders called uniforms.
-// These are essentially global variables, having the same value for all vertices and/or fragments.
-"in vec3 Color;\n"
-"in vec2 Texcoord;\n"
-"in float Depth;\n"
-"out vec4 outColor;\n"
-
-"uniform sampler2D texHalo;\n"
-"uniform sampler2D texGoogle;\n"
-"uniform vec3 extraColor;\n"
-
-"void main()\n"
-"{\n"
-"vec4 colHalo = texture(texHalo, Texcoord);//  * vec4(Color, 1.0f);\n"
-"vec4 colGoogle = texture(texGoogle, Texcoord);//  * vec4(Color, 1.0f);\n"
-
-// the mix function is a special GLSL function that linearly interpolates between 2 variables based on the third parameter.
-// A value of 0.0 will result in the first value, a value of 1.0 will result in the second value and a value in between will
-// result in a mixture of both.
-"outColor = mix(colHalo, colGoogle, 0.5f);"
-"outColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);"
-"outColor *= vec4(Color, 1.0f);"
-"//outColor *= vec4(extraColor, 1.0f);\n"
-//"outColor = vec4(1 - Depth, 1 - Depth, 1 - Depth, 1.0f);" // display depth
-"}\n";
-
-const char* screenVertexSource =
-"#version 150 core\n"
-"in vec2 position;\n"
-"in vec2 texCoord;\n"
-"out vec2 Texcoord;\n"
-"void main() \n"
-"{\n"
-"Texcoord = texCoord;\n"
-"gl_Position = vec4(position, 0.0f, 1.0f);\n"
-"}";
-
-const char* screenFragmentSource = 
-R"glsl(
+const char* finalVertexshaderSrc = R"glsl(
 #version 150 core
-in vec2 Texcoord;
-out vec4 outColor;
-uniform sampler2D texFramebuffer;
-const float blurSizeH = 1.0f / 800.0f;
-const float blurSizeV = 1.0f / 800.0f;
+
+in float inValue;
+out float geoValue;
+
 void main()
 {
+	geoValue = sqrt(inValue);
+} 
+)glsl";
 
-outColor = texture(texFramebuffer, Texcoord);
+const char* finalGeometryShaderSrc = R"glsl(
+#version 150 core
 
-//vec4 top = texture(texFramebuffer, vec2(Texcoord.x, Texcoord.y + 1.0 / 200.0));
-//vec4 bottom = texture(texFramebuffer, vec2(Texcoord.x, Texcoord.y - 1.0 / 200.0));
-//vec4 left = texture(texFramebuffer, vec2(Texcoord.x - 1.0 / 300.0, Texcoord.y));
-//vec4 right = texture(texFramebuffer, vec2(Texcoord.x + 1.0 / 300.0, Texcoord.y));
-//vec4 topLeft = texture(texFramebuffer, vec2(Texcoord.x - 1.0 / 300.0, Texcoord.y + 1.0 / 200.0f));
-//vec4 topRight = texture(texFramebuffer, vec2(Texcoord.x + 1.0 / 300.0, Texcoord.y + 1.0 / 200.0f));
-//vec4 bottomLeft = texture(texFramebuffer, vec2(Texcoord.x - 1.0 / 300.0, Texcoord.y - 1.0 / 200.0f));
-//vec4 bottomRight = texture(texFramebuffer, vec2(Texcoord.x + 1.0 / 300.0, Texcoord.y - 1.0 / 200.0f));
-//
-//vec4 sx = -topLeft - 2 * left - bottomLeft + topRight + 2 * right + bottomRight;
-//vec4 sy = -topLeft - 2 * top - topRight + bottomLeft + 2 * bottom + bottomRight;
-//vec4 sobel = sqrt(sx * sx + sy * sy);
-//outColor = sobel;
+layout(points) in;
+layout(triangle_strip, max_vertices = 3) out;
 
-// blur
-//vec4 sum = vec4(0.0f);
-//for (int x = -4; x <= 4; ++x)
-//{
-//for (int y = -4; y <= 4; ++y)
-//{
-//sum += texture(texFramebuffer, vec2(Texcoord.x + x * blurSizeH, Texcoord.y + y * blurSizeV)) / 81.0f;
-//}
-//}
-//outColor = sum;
+in float[] geoValue;
+out float outValue;
 
-// gray scale:
-//outColor = texture(texFramebuffer, Texcoord);
-//float avg = (outColor.r + outColor.g + outColor.b) * 0.3f;
-//float avg = 0.2126f * outColor.r + 0.7152f * outColor.g + 0.0722 * outColor.b;
+void main()
+{
+	for (int i = 0; i < 3; ++i)
+	{
+		outValue = geoValue[0] + i;
+		EmitVertex();
+	}
 
+	EndPrimitive();
+}
 
-})glsl";
+)glsl";
 
 #include <stdio.h>
 
@@ -530,8 +706,8 @@ void CreateShaderProgram(const char* vertexSource, const char* fragSource, GLuin
 	// Successful compilation?
 	if (status == GL_FALSE)
 	{
-		std::cout << "Vertex shader compile error" << std::endl;
-		std::cout << buffer << std::endl;
+		std::cout << "Vertex shader compile error\n";
+		std::cout << buffer << "\n";
 	}
 
 	//Create and compile the fragment shader
@@ -544,8 +720,8 @@ void CreateShaderProgram(const char* vertexSource, const char* fragSource, GLuin
 
 	if (status == GL_FALSE)
 	{
-		std::cout << "Fragment shader compile error" << std::endl;
-		std::cout << buffer << std::endl;
+		std::cout << "Fragment shader compile error\n";
+		std::cout << buffer << "\n";
 	}
 
 	//Link the vertex and fragment shader into a shader program
@@ -573,6 +749,14 @@ void CreateShaderProgram(const char* vertexSource, const char* fragSource, GLuin
 	// A shader object can be deleted with glDeleteShader, but it will not actually be removed before it has been
 	// detached from all programs with glDetachShader.	
 	glLinkProgram(shaderProgram);
+}
+
+GLuint CreateShader(GLenum type, const GLchar* src)
+{
+	GLuint shader = glCreateShader(type);
+	glShaderSource(shader, 1, &src, nullptr);
+	glCompileShader(shader);
+	return shader;
 }
 
 void specifySceneVertexAttribute(GLuint shaderProgram)
@@ -638,6 +822,8 @@ void SpecifyScreenVertexAttributes(GLuint shaderProgram)
 	glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 }
 
+#define THIRD_PART
+
 int main()
 {
 	int errResult = 0;
@@ -676,6 +862,216 @@ int main()
 	glewExperimental = GL_TRUE;
 	glewInit();
 
+#ifdef THIRD_PART
+
+	GLuint shader = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(shader, 1, &finalVertexshaderSrc, nullptr);
+	glCompileShader(shader);
+
+	GLuint geoShader = glCreateShader(GL_GEOMETRY_SHADER);
+	glShaderSource(geoShader, 1, &finalGeometryShaderSrc, nullptr);
+	glCompileShader(geoShader);
+
+
+	GLuint program = glCreateProgram();
+	glAttachShader(program, shader);
+	glAttachShader(program, geoShader);
+
+	const char* feedbackVaryings[] = { "outValue" };
+	
+	// The first parameter is self-explanatory, the second and third parameter specify
+	// th elength of the output names array and the array itself, and the final paramter
+	// specifies how the data should be written.
+
+	// the following 2 formats are avaiable:
+	// GL_INTERLEAVED_ATTRIBS: Write all attributes to a single buffer object
+	// GL_SEPARATE_ATTRIBS: Writes attributes to multiple buffer objects or at different offsets into a buffer.
+	glTransformFeedbackVaryings(program, 1, feedbackVaryings, GL_INTERLEAVED_ATTRIBS);
+
+	glLinkProgram(program);
+	glUseProgram(program);
+
+	GLuint vao;
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
+
+	float data[] = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f };
+
+	GLuint vbo;
+	glGenBuffers(1, &vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+	// The numbers in data are the numbers we want the shader to calculate the square
+	// root of and transform feedback will help us get the results back.
+	glBufferData(GL_ARRAY_BUFFER, sizeof(data), data, GL_STATIC_DRAW);
+
+	GLint inputAttrib = glGetAttribLocation(program, "inValue");
+	glEnableVertexAttribArray(inputAttrib);
+	glVertexAttribPointer(inputAttrib, 1, GL_FLOAT, GL_FALSE, 0, 0);
+
+	// Trnaform feedback will return the values of outValue,
+	// but first we'll need to create a VBO to hold these, just like the input vertices.
+	GLuint tbo;
+	glGenBuffers(1, &tbo);
+	glBindBuffer(GL_ARRAY_BUFFER, tbo);
+
+	// Notice that we now pass a nullptr to create a buffer big enough to hold all of the resulting floats.
+	// But without specifying any initial data.
+	// The appropriate usage type is now GL_STATIC_READ, which inidcates that we intend OpenGL to write to this buffer
+	// and our application to read from it.
+
+	// because each input vertex will generate 3 vertices as output, 
+	// the transform feedback buffer now needs to be 3 times as big as the input buffer.
+	glBufferData(GL_ARRAY_BUFFER, sizeof(data) * 3, nullptr, GL_STATIC_READ);
+
+	// Luckily, there are ways to keep track of how many primitives were written by using query objects
+	GLuint query;
+	glGenQueries(1, &query);
+
+	// We don't need to render anything so disable the rasterizer
+	glEnable(GL_RASTERIZER_DISCARD);
+
+	// to actually bind the buffer we've created above as transform feedback buffer,
+	// we have to use a new functoin caled glBindBufferBase.
+	
+	// The first paramter is currently required to be GL_TRANSFORM_FEEDBACK_BUFFER
+	// to allow for future extensions. the second paramter is the index of the output variable, 
+	// whic is simply 0 because we only have one.
+	// The final parameter specifies the buffer object to bind.
+
+	glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, tbo);
+
+	// Before doing the draw call, you have to enter transform feedback mode
+	// The possible values for the primitive mode are:
+	// GL_POINTS - GL_POINTS
+	// GL_LINES - GL_LINES, GL_LINE_lOOP, GL_LINE_STRIP, GL_LINES_ADJACENCY, GL_LINE_STRIP_ADJACENCY
+	// GL_TRIANGLES -- GL_TRIANGLES, GL_TRIANGLE_STRIP, GL_TRIANGLE_FAN, GL_TRIANGLES_ADJACENCY, GL_TRIANGLE_STRIP_ADJACENCY
+
+	// Right before glBeginTransformFeedback, we have to tell OpenGL to keep track
+	// of the number of primitive written
+	glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, query);
+
+	// When using a geometry shader, the primitive specified to glBeginTransformFeedback
+	// must match the output type of the geometry shader.
+	glBeginTransformFeedback(GL_TRIANGLES);
+
+	// If you only have a vertex shader, the primitive must match the one being drawn.
+	glDrawArrays(GL_POINTS, 0, 5);
+
+	glEndTransformFeedback();
+	glEndQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
+
+	glDisable(GL_RASTERIZER_DISCARD);
+
+	// Normally, at the end of a drawing operation, we'd swap the buffers to present the result on the screen.
+	// We still want to make sure the rendering operation has finished before trying to access the results,
+	// so we flush OpenGL's command buffer
+	glFlush();
+	
+	// Retrieve query result:
+	GLuint primitives;
+	glGetQueryObjectuiv(query, GL_QUERY_RESULT, &primitives);
+	
+	std::cout << primitives << " primitives written" << std::endl;
+
+	// Query objects can also be used to record things such as GL_PRIMITIVES_GENERATED
+	// when dealing with just geometry shaders and GL_TIME_ELAPSED to measure time spent ont
+	// the server (GPU) doing work.
+
+	float feedback[15];
+	glGetBufferSubData(GL_TRANSFORM_FEEDBACK_BUFFER, 0, sizeof(feedback), feedback);
+
+	for (int i = 0; i < 15; ++i)
+		std::cout << feedback[i] << std::endl;
+	
+	std::cin.get();
+
+	glDeleteProgram(program);
+	glDeleteShader(shader);
+	glDeleteBuffers(1, &tbo);
+	glDeleteBuffers(1, &vbo);
+
+	glDeleteVertexArrays(1, &vao);
+	window.close();
+
+	return 0;
+#endif
+
+#if defined SECOND_PART
+	GLuint vertexShader = CreateShader(GL_VERTEX_SHADER, vertexShaderSrc);
+	GLuint geometryShader = CreateShader(GL_GEOMETRY_SHADER, geometryShaderSrc);
+	GLuint fragmentShader = CreateShader(GL_FRAGMENT_SHADER, fragmentShaderSrc);
+
+	GLuint shaderProgram = glCreateProgram();
+	glAttachShader(shaderProgram, vertexShader);
+	glAttachShader(shaderProgram, geometryShader); 
+	glAttachShader(shaderProgram, fragmentShader);
+	glLinkProgram(shaderProgram);
+	glUseProgram(shaderProgram);
+
+	GLuint vbo;
+	glGenBuffers(1, &vbo);
+
+	float points[] = 
+	{
+		-0.45f,  0.45f, 1.0f, 0.0f, 0.0f, 4.0f,
+		 0.45f,  0.45f, 0.0f, 1.0f, 0.0f, 8.0f,
+		 0.45f, -0.45f, 0.0f, 0.0f, 1.0f, 16.0f,
+		-0.45f, -0.45f, 1.0f, 1.0f, 0.0f, 32.0f
+	};
+
+	// We have 4 points here, each with x and y device coordinates.
+	// Remember that device coordinates range from 1 to 1 from left to right and 
+	// bottom to top of the screen, so each corner will have a point.
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(points), points, GL_STATIC_DRAW);
+
+	GLuint vao;
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
+
+	// Sepecify layout of points data
+	GLint posAttrib = glGetAttribLocation(shaderProgram, "pos");
+	glEnableVertexAttribArray(posAttrib);
+	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), 0);
+
+	GLint colorAttrib = glGetAttribLocation(shaderProgram, "color");
+	glEnableVertexAttribArray(colorAttrib);
+	glVertexAttribPointer(colorAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(2 * sizeof(float)));
+	
+	GLint sidesAttrib = glGetAttribLocation(shaderProgram, "sides");
+	glEnableVertexAttribArray(sidesAttrib);
+	glVertexAttribPointer(sidesAttrib, 1, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(5 * sizeof(float)));
+
+	bool running = true;
+
+	while (running)
+	{
+		sf::Event windowEvent;
+		while (window.pollEvent(windowEvent))
+		{
+			switch (windowEvent.type)
+			{
+			case sf::Event::Closed:
+				running = false;
+				break;
+			case sf::Event::KeyPressed:
+				if (windowEvent.key.code == sf::Keyboard::Escape)
+					running = false;
+				break;
+			}
+		}
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		glDrawArrays(GL_POINTS, 0, 4);
+
+		window.display();
+	}
+
+#endif
+
+#if defined FIRST_PART
 	// You can imagine that real graphics programs use many different shaders and vertex layouts to take care of a wide variety of needs and special effects.
 	// Changing the active shader program is easy enough with a call to glUseProgram, but it would be quite inconvenient if you had to set up all of the attributes again every time.
 
@@ -1098,7 +1494,7 @@ int main()
 		redSin += 0.5f;
 
 		std::cout << std::setprecision(2);
-		std::cout << "red:\t" << redSin << "\t\t" << "blue:\t" << 1.0f - redSin << std::endl;
+		std::cout << "red:\t" << redSin << "\t\t" << "blue:\t" << 1.0f - redSin << "\n";
 
 		// The 3D and 2D drawing operations both have their own vertex array (cube vs quad),
 		// shader program (3D vs 2D post-processing) and textures.
@@ -1132,7 +1528,7 @@ int main()
 
 	glDeleteVertexArrays(1, &vaoCube);
 	glDeleteVertexArrays(1, &vaoQuad);
-
+#endif
 	window.close();
 
 	return errResult;
